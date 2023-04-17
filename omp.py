@@ -14,7 +14,7 @@ from rich.logging import RichHandler
 from tqdm import tqdm
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
 )
 logger = logging.getLogger()
 
@@ -25,17 +25,19 @@ SPARSITY_MULTIPLE = 1
 # fmt: off
 SETTINGS = {
     "dimensions": [
-        (20, 50),
-        # (500, 800),
-        # (1600, 2400),
+        (500, 500),
+        (500, 750),
+        (500, 1000),
+        (500, 1250),
+        (500, 1500),
     ],
     "sparsity": [
-        # 0.01,
-        # 0.05,
-        # 0.1,
+        0.01,
+        0.05,
+        0.1,
         # 0.2,
         # 0.3,
-        0.4,
+        # 0.4,
     ],
     "noise_std": [
         0.0,
@@ -129,8 +131,11 @@ def ip(Phi, y, sparsity, tol=1e-6):
         objective = ip_objective(Phi, y, indices=indices)
         max_objective = objective.max()
         log["objective"].append(max_objective.item())
-        if np.abs(max_objective) < tol:
-            break
+
+        # TODO: rethink termination criterion
+        # if np.abs(max_objective) < tol:
+        #     break
+
         indices.append(np.argmax(objective).item())
         log["indices"].append(copy(indices))
         y_hat = ip_estimate_y(Phi, indices, y)
@@ -153,8 +158,11 @@ def omp(Phi, y, sparsity, tol=1e-6):
         P = projection(Phi[:, indices], perp=True)
         residual = P @ y
         squared_error = residual.T @ residual
-        if squared_error < tol:
-            break
+
+        # TODO: rethink termination criterion
+        # if squared_error < tol:
+        #     break
+
         objective = np.abs(Phi.T @ residual)
         log["objective"].append(objective.max().item())
         indices.append(np.argmax(objective).item())
@@ -178,6 +186,10 @@ def precision(estimated, true):
 
 def mse(estimated, true):
     return np.mean((estimated - true) ** 2).item()
+
+
+def mutual_coherence(Phi):
+    return np.max(np.abs(np.diag(Phi.T @ Phi)))
 
 
 def run_experiment(
@@ -205,6 +217,7 @@ def run_experiment(
             "experiment_number": experiment_number,
             "m": m,
             "n": n,
+            "measurement_rate": m / n,
             "sparsity": s,
             "noise_std": noise_std,
             "output_dir": str(output_dir),
@@ -254,6 +267,7 @@ def run_experiment(
                 omp_mse_y.append(mse(y_hat, y))
 
             results = {
+                "coherence": mutual_coherence(Phi),
                 "precision_ip": ip_precision,
                 "precision_omp": omp_precision,
                 "recall_ip": ip_recall,
@@ -290,10 +304,17 @@ def main(
 
     if jobs > 1:
         if gpu:
-            gpu_list = [g.id for g in GPUtil.getAvailable(maxLoad=0.2, maxMemory=0.2)]
+            gpu_list = [
+                g for g in GPUtil.getAvailable(maxLoad=0.2, maxMemory=0.2, limit=jobs)
+            ]
             workers = len(gpu_list)
         else:
-            workers = cpu_count()
+            workers = min(jobs, cpu_count())
+
+        if workers < jobs:
+            logger.info(
+                f"Running {workers} jobs; {jobs} was too many for system resources"
+            )
 
         pool = ProcessPoolExecutor(max_workers=workers)
 
