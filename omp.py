@@ -1,16 +1,23 @@
 import json
+import logging
 from copy import deepcopy
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
+from rich.logging import RichHandler
 import seaborn as sns
 import typer
+
+logging.basicConfig(
+    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+)
+logger = logging.getLogger()
 
 try:
     import cupy as np
 except ModuleNotFoundError:
-    pass
+    logger.info("cupy installation not found. Falling back to numpy.")
+    import numpy as np
 
 plt.rcParams.update(
     {
