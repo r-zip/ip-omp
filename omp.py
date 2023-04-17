@@ -1,5 +1,6 @@
 import json
 import logging
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
@@ -8,6 +9,7 @@ import matplotlib.pyplot as plt
 from rich.logging import RichHandler
 import seaborn as sns
 import typer
+from tqdm import tqdm
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -283,24 +285,53 @@ def run_experiment(
         json.dump(results, f)
 
 
-def main(results_dir: Path, overwrite: bool = False, plot: bool = False):
+def main(results_dir: Path, overwrite: bool = False, plot: bool = False, jobs: int = 1):
     if results_dir.exists() and not overwrite:
         FileExistsError(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
-    for k, ((m, n), s, noise_std) in enumerate(
-        product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
-    ):
-        run_experiment(
-            k,
-            m,
-            n,
-            s,
-            output_dir=results_dir,
-            noise_std=noise_std,
-            plot=plot,
-        )
+    if jobs > 1:
+        pool = ProcessPoolExecutor(max_workers=jobs)
+        futures = []
+        for k, ((m, n), s, noise_std) in enumerate(
+            product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
+        ):
+            futures.append(
+                pool.submit(
+                    run_experiment,
+                    k,
+                    m,
+                    n,
+                    s,
+                    output_dir=results_dir,
+                    noise_std=noise_std,
+                    plot=plot,
+                )
+            )
+        # progress bar
+        for _ in tqdm(as_completed(futures), total=len(futures)):
+            pass
+    else:
+        for k, ((m, n), s, noise_std) in enumerate(
+            tqdm(
+                product(
+                    SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"]
+                ),
+                total=len(SETTINGS["dimensions"])
+                * len(SETTINGS["sparsity"])
+                * len(SETTINGS["noise_std"]),
+            )
+        ):
+            run_experiment(
+                k,
+                m,
+                n,
+                s,
+                output_dir=results_dir,
+                noise_std=noise_std,
+                plot=plot,
+            )
 
 
 if __name__ == "__main__":
