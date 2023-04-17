@@ -224,14 +224,18 @@ def run_experiment(
         omp_mse_x = []
 
         logger.info("Generating metrics for IP")
-        for indices, x_hat, y_hat in zip(log_ip.indices, log_ip.x_hat, log_ip.y_hat):
+        for indices, x_hat, y_hat in zip(
+            log_ip["indices"], log_ip["x_hat"], log_ip["y_hat"]
+        ):
             ip_recall.append(recall(indices, true_support))
             ip_precision.append(precision(indices, true_support))
             ip_mse_x.append(mse(x_hat, x))
             ip_mse_y.append(mse(y_hat, y))
 
         logger.info("Generating metrics for OMP")
-        for indices, x_hat, y_hat in zip(log_omp.indices, log_omp.x_hat, log_omp.y_hat):
+        for indices, x_hat, y_hat in zip(
+            log_omp["indices"], log_omp["x_hat"], log_omp["y_hat"]
+        ):
             omp_recall.append(recall(indices, true_support))
             omp_precision.append(precision(indices, true_support))
             omp_mse_x.append(mse(x_hat, x))
