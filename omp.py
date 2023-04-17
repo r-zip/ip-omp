@@ -4,10 +4,8 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import seaborn as sns
-from torch.cuda import is_available
 import typer
 
 plt.rcParams.update(
@@ -17,9 +15,11 @@ plt.rcParams.update(
     }
 )
 
+device_: str | torch.device = "cpu"
+
 
 def gen_dictionary(m: int, n: int) -> torch.Tensor:
-    Phi = torch.randn(m, n)
+    Phi = torch.randn(m, n, device=device_)
     return Phi / torch.linalg.norm(Phi, dim=0)
 
 
@@ -28,7 +28,7 @@ def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
     P = U @ U.T
 
     if perp:
-        return torch.eye(P.shape[0]) - P
+        return torch.eye(P.shape[0], device=device_) - P
 
     return P
 
@@ -37,10 +37,12 @@ def generate_measurements_and_coeffs(
     Phi: torch.Tensor, p: float = 0.01, noise_std: float = 0.0
 ) -> tuple[torch.Tensor, torch.Tensor]:
     m, n = Phi.shape
-    supp = torch.rand(n) <= p
-    x = torch.zeros(n)
-    x[supp] = torch.randn(int(torch.sum(supp)))
-    return (Phi @ x + noise_std * torch.randn(m)).reshape(-1, 1), x.reshape(-1, 1)
+    supp = torch.rand(n, device=device_) <= p
+    x = torch.zeros(n, device=device_)
+    x[supp] = torch.randn(int(torch.sum(supp)), device=device_)
+    return (Phi @ x + noise_std * torch.randn(m, device=device_)).reshape(
+        -1, 1
+    ), x.reshape(-1, 1)
 
 
 class Log:
@@ -108,7 +110,7 @@ def omp_estimate_x(
     Phi: torch.Tensor, indices: list[int], y: torch.Tensor
 ) -> torch.Tensor:
     Phi_t = Phi[:, indices]
-    x_hat = torch.zeros((Phi.shape[1], 1))
+    x_hat = torch.zeros((Phi.shape[1], 1), device=device_)
     x_hat[indices] = torch.linalg.pinv(Phi_t) @ y
     return x_hat
 
@@ -182,107 +184,108 @@ def mse(estimated: torch.Tensor, true: torch.Tensor) -> float:
 
 
 def main(m: int, n: int, s: float, output_dir: Path, device: str | None = None):
-    output_dir.mkdir(exist_ok=True)
+    global device_
 
-    if device:
-        torch.set_default_device(device)
-    elif torch.cuda.is_available():
-        torch.set_default_device("cuda")
-    elif torch.backends.mps.is_available():
-        torch.set_default_device("mps")
-    else:
-        torch.set_default_device("cpu")
+    if device is None:
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
 
-    sns.set()
+    with torch.no_grad():
+        output_dir.mkdir(exist_ok=True)
 
-    Phi = gen_dictionary(m, n)
-    y, x = generate_measurements_and_coeffs(Phi, p=s)
-    breakpoint()
-    true_support = set(torch.where(x.ravel() != 0)[0])
-    y = y.reshape(-1, 1)
-    log_ip = ip(Phi, y, debug=None)
-    log_omp = omp(Phi, y, debug=None)
+        sns.set()
 
-    ip_recall = []
-    omp_recall = []
-    ip_precision = []
-    omp_precision = []
-    ip_mse_y = []
-    omp_mse_y = []
-    ip_mse_x = []
-    omp_mse_x = []
+        Phi = gen_dictionary(m, n)
+        y, x = generate_measurements_and_coeffs(Phi, p=s)
+        true_support = set(torch.where(x.ravel() != 0)[0])
+        y = y.reshape(-1, 1)
+        log_ip = ip(Phi, y, debug=None)
+        log_omp = omp(Phi, y, debug=None)
 
-    for indices, x_hat, y_hat in zip(log_ip.indices, log_ip.x_hat, log_ip.y_hat):
-        ip_recall.append(recall(indices, true_support))
-        ip_precision.append(precision(indices, true_support))
-        ip_mse_x.append(mse(x_hat, x))
-        ip_mse_y.append(mse(y_hat, y))
+        ip_recall = []
+        omp_recall = []
+        ip_precision = []
+        omp_precision = []
+        ip_mse_y = []
+        omp_mse_y = []
+        ip_mse_x = []
+        omp_mse_x = []
 
-    for indices, x_hat, y_hat in zip(log_omp.indices, log_omp.x_hat, log_omp.y_hat):
-        omp_recall.append(recall(indices, true_support))
-        omp_precision.append(precision(indices, true_support))
-        omp_mse_x.append(mse(x_hat, x))
-        omp_mse_y.append(mse(y_hat, y))
+        for indices, x_hat, y_hat in zip(log_ip.indices, log_ip.x_hat, log_ip.y_hat):
+            ip_recall.append(recall(indices, true_support))
+            ip_precision.append(precision(indices, true_support))
+            ip_mse_x.append(mse(x_hat, x))
+            ip_mse_y.append(mse(y_hat, y))
 
-    plt.plot(omp_recall)
-    plt.plot(ip_recall, "--")
-    plt.legend(["OMP", "IP"])
-    plt.xlabel("Iteration")
-    plt.ylabel(
-        r"$\frac{|\mathrm{supp}(\widehat{x}) \, \cap \, \mathrm{supp}(x)|}{|\mathrm{supp}(x)|}$",
-        fontsize="x-large",
-    )
-    plt.title("Recall of estimated support")
-    plt.savefig(output_dir / "recall.png", dpi=300)
-    plt.close()
+        for indices, x_hat, y_hat in zip(log_omp.indices, log_omp.x_hat, log_omp.y_hat):
+            omp_recall.append(recall(indices, true_support))
+            omp_precision.append(precision(indices, true_support))
+            omp_mse_x.append(mse(x_hat, x))
+            omp_mse_y.append(mse(y_hat, y))
 
-    plt.plot(omp_precision)
-    plt.plot(ip_precision, "--")
-    plt.legend(["OMP", "IP"])
-    plt.xlabel("Iteration")
-    plt.ylabel(
-        r"$\frac{|\mathrm{supp}(\widehat{x}) \, \cap \, \mathrm{supp}(x)|}{|\mathrm{supp}(\widehat{x})|}$",
-        fontsize="x-large",
-    )
-    plt.title("Precision of estimated support")
-    plt.savefig(output_dir / "precision.png", dpi=300)
-    plt.close()
+        plt.plot(omp_recall)
+        plt.plot(ip_recall, "--")
+        plt.legend(["OMP", "IP"])
+        plt.xlabel("Iteration")
+        plt.ylabel(
+            r"$\frac{|\mathrm{supp}(\widehat{x}) \, \cap \, \mathrm{supp}(x)|}{|\mathrm{supp}(x)|}$",
+            fontsize="x-large",
+        )
+        plt.title("Recall of estimated support")
+        plt.savefig(output_dir / "recall.png", dpi=300)
+        plt.close()
 
-    plt.plot(omp_mse_x)
-    plt.plot(ip_mse_x, "--")
-    plt.legend(["OMP", "IP"])
-    plt.xlabel("Iteration")
-    plt.ylabel(r"$\|x - \widehat{x}\|_2^2$")
-    plt.title("MSE of Sparse Code Estimate")
-    plt.savefig(output_dir / "mse_x.png", dpi=300)
-    plt.close()
+        plt.plot(omp_precision)
+        plt.plot(ip_precision, "--")
+        plt.legend(["OMP", "IP"])
+        plt.xlabel("Iteration")
+        plt.ylabel(
+            r"$\frac{|\mathrm{supp}(\widehat{x}) \, \cap \, \mathrm{supp}(x)|}{|\mathrm{supp}(\widehat{x})|}$",
+            fontsize="x-large",
+        )
+        plt.title("Precision of estimated support")
+        plt.savefig(output_dir / "precision.png", dpi=300)
+        plt.close()
 
-    plt.plot(omp_mse_y)
-    plt.plot(ip_mse_y, "--")
-    plt.legend(["OMP", "IP"])
-    plt.xlabel("Iteration")
-    plt.ylabel(r"$\|y - \widehat{y}\|_2^2$")
-    plt.title("MSE of Measurement Estimate")
-    plt.savefig(output_dir / "mse_y.png", dpi=300)
-    plt.close()
+        plt.plot(omp_mse_x)
+        plt.plot(ip_mse_x, "--")
+        plt.legend(["OMP", "IP"])
+        plt.xlabel("Iteration")
+        plt.ylabel(r"$\|x - \widehat{x}\|_2^2$")
+        plt.title("MSE of Sparse Code Estimate")
+        plt.savefig(output_dir / "mse_x.png", dpi=300)
+        plt.close()
 
-    results = {
-        "precision_ip": ip_precision,
-        "precision_omp": omp_precision,
-        "recall_ip": ip_recall,
-        "recall_omp": omp_recall,
-        "mse_x_ip": ip_mse_x,
-        "mse_x_omp": omp_mse_x,
-        "mse_y_ip": ip_mse_y,
-        "mse_y_omp": omp_mse_y,
-        "iters_ip": len(log_ip.indices),
-        "iters_omp": len(log_omp.indices),
-        "max_objective_ip": log_ip.objective,
-        "max_objective_omp": log_omp.objective,
-    }
+        plt.plot(omp_mse_y)
+        plt.plot(ip_mse_y, "--")
+        plt.legend(["OMP", "IP"])
+        plt.xlabel("Iteration")
+        plt.ylabel(r"$\|y - \widehat{y}\|_2^2$")
+        plt.title("MSE of Measurement Estimate")
+        plt.savefig(output_dir / "mse_y.png", dpi=300)
+        plt.close()
 
-    with open(output_dir / "results.json", "w") as f:
-        json.dump(results, f)
+        results = {
+            "precision_ip": ip_precision,
+            "precision_omp": omp_precision,
+            "recall_ip": ip_recall,
+            "recall_omp": omp_recall,
+            "mse_x_ip": ip_mse_x,
+            "mse_x_omp": omp_mse_x,
+            "mse_y_ip": ip_mse_y,
+            "mse_y_omp": omp_mse_y,
+            "iters_ip": len(log_ip.indices),
+            "iters_omp": len(log_omp.indices),
+            "max_objective_ip": log_ip.objective,
+            "max_objective_omp": log_omp.objective,
+        }
+
+        with open(output_dir / "results.json", "w") as f:
+            json.dump(results, f)
 
 
 if __name__ == "__main__":
