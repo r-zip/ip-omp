@@ -1,10 +1,13 @@
 import json
 from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 import seaborn as sns
+from torch.cuda import is_available
 import typer
 
 plt.rcParams.update(
@@ -15,37 +18,39 @@ plt.rcParams.update(
 )
 
 
-def gen_dictionary(m, n):
-    Phi = np.random.randn(m, n)
-    return Phi / np.linalg.norm(Phi, axis=0)
+def gen_dictionary(m: int, n: int) -> torch.Tensor:
+    Phi = torch.randn(m, n)
+    return Phi / torch.linalg.norm(Phi, dim=0)
 
 
-def projection(Phi_t, perp=False):
-    U, *_ = np.linalg.svd(Phi_t, full_matrices=False)
+def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
+    U, *_ = torch.linalg.svd(Phi_t, full_matrices=False)
     P = U @ U.T
 
     if perp:
-        return np.eye(P.shape[0]) - P
+        return torch.eye(P.shape[0]) - P
 
     return P
 
 
-def generate_measurements_and_coeffs(Phi, p=0.01, noise_std=0.0):
+def generate_measurements_and_coeffs(
+    Phi: torch.Tensor, p: float = 0.01, noise_std: float = 0.0
+) -> tuple[torch.Tensor, torch.Tensor]:
     m, n = Phi.shape
-    supp = np.random.rand(n) <= p
-    x = np.zeros(n)
-    x[supp] = np.random.randn(int(np.sum(supp)))
-    return (Phi @ x + noise_std * np.random.randn(m)).reshape(-1, 1), x.reshape(-1, 1)
+    supp = torch.rand(n) <= p
+    x = torch.zeros(n)
+    x[supp] = torch.randn(int(torch.sum(supp)))
+    return (Phi @ x + noise_std * torch.randn(m)).reshape(-1, 1), x.reshape(-1, 1)
 
 
 class Log:
-    def __init__(self, debug=None):
+    def __init__(self, debug: list[str] | None = None) -> None:
         self.debug = set(debug or [])
-        self.keys = []
+        self._keys = []
 
-    def log(self, key, value, context=None):
+    def log(self, key: str, value: Any, context: dict | str | None = None) -> None:
         if not hasattr(self, key):
-            self.keys.append(key)
+            self.keys().append(key)
             setattr(self, key, [])
 
         if self.debug and context:
@@ -55,60 +60,80 @@ class Log:
 
         getattr(self, key).append(deepcopy(value))
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.keys()}
 
-    def __repr__(self):
+    def keys(self) -> list[str]:
+        return self._keys
+
+    def __repr__(self) -> str:
         return f"Log({self.keys()})"
 
 
-def ip_objective(Phi, y, indices=None):
+def ip_objective(
+    Phi: torch.Tensor, y: torch.Tensor, indices: list[int] | None = None
+) -> torch.Tensor:
     P = projection(Phi[:, indices], perp=True)
     Phi_projected = P @ Phi
-    Phi_projected_normalized = Phi_projected / np.linalg.norm(
-        Phi_projected, axis=0
+    Phi_projected_normalized = Phi_projected / torch.linalg.norm(
+        Phi_projected, dim=0
     ).reshape(1, -1)
-    objective = np.abs(Phi_projected_normalized.T @ y)
-    objective[indices] = -np.inf
+    objective = torch.abs(Phi_projected_normalized.T @ y)
+    objective[indices] = -torch.inf
     return objective
 
 
-def omp_objective(Phi, y, indices=None):
+def omp_objective(
+    Phi: torch.Tensor, y: torch.Tensor, indices: list[int] | None = None
+) -> torch.Tensor:
     P = projection(Phi[:, indices], perp=True)
     Phi_projected = P @ Phi
-    return np.abs(Phi_projected.T @ y)
+    return torch.abs(Phi_projected.T @ y)
 
 
-def omp_estimate_y(Phi, indices, y):
+def omp_estimate_y(
+    Phi: torch.Tensor, indices: list[int], y: torch.Tensor
+) -> torch.Tensor:
     Phi_t = Phi[:, indices]
     return projection(Phi_t, perp=False) @ y
 
 
-def ip_estimate_y(Phi, indices, y):
+def ip_estimate_y(
+    Phi: torch.Tensor, indices: list[int], y: torch.Tensor
+) -> torch.Tensor:
     return omp_estimate_y(Phi, indices, y)
 
 
-def omp_estimate_x(Phi, indices, y):
+def omp_estimate_x(
+    Phi: torch.Tensor, indices: list[int], y: torch.Tensor
+) -> torch.Tensor:
     Phi_t = Phi[:, indices]
-    x_hat = np.zeros((Phi.shape[1], 1))
-    x_hat[indices] = np.linalg.pinv(Phi_t) @ y
+    x_hat = torch.zeros((Phi.shape[1], 1))
+    x_hat[indices] = torch.linalg.pinv(Phi_t) @ y
     return x_hat
 
 
-def ip_estimate_x(Phi, indices, y):
+def ip_estimate_x(
+    Phi: torch.Tensor, indices: list[int], y: torch.Tensor
+) -> torch.Tensor:
     return omp_estimate_x(Phi, indices, y)
 
 
-def ip(Phi, y, tol=1e-6, debug=False):
+def ip(
+    Phi: torch.Tensor,
+    y: torch.Tensor,
+    tol: float = 1e-6,
+    debug: list[str] | None = None,
+) -> Log:
     log = Log(debug=debug)
     indices = []
     while True:
         objective = ip_objective(Phi, y, indices=indices)
         max_objective = objective.max()
-        log.log("objective", max_objective)
-        if np.abs(max_objective) < tol:
+        log.log("objective", max_objective.item())
+        if torch.abs(max_objective) < tol:
             break
-        indices.append(np.argmax(objective).item())
+        indices.append(torch.argmax(objective).item())
         log.log("indices", indices)
         y_hat = ip_estimate_y(Phi, indices, y)
         log.log("y_hat", y_hat)
@@ -118,7 +143,12 @@ def ip(Phi, y, tol=1e-6, debug=False):
     return log
 
 
-def omp(Phi, y, tol=1e-6, debug=False):
+def omp(
+    Phi: torch.Tensor,
+    y: torch.Tensor,
+    tol: float = 1e-6,
+    debug: list[str] | None = None,
+) -> Log:
     log = Log(debug=debug)
     indices = []
     while True:
@@ -127,9 +157,9 @@ def omp(Phi, y, tol=1e-6, debug=False):
         squared_error = residual.T @ residual
         if squared_error < tol:
             break
-        objective = np.abs(Phi.T @ residual)
-        log.log("objective", objective.max())
-        indices.append(np.argmax(objective).item())
+        objective = torch.abs(Phi.T @ residual)
+        log.log("objective", objective.max().item())
+        indices.append(torch.argmax(objective).item())
         log.log("indices", indices)
         y_hat = ip_estimate_y(Phi, indices, y)
         log.log("y_hat", y_hat)
@@ -139,24 +169,36 @@ def omp(Phi, y, tol=1e-6, debug=False):
     return log
 
 
-def recall(estimated, true):
+def recall(estimated: list[int] | set[int], true: list[int] | set[int]) -> float:
     return len(set(estimated).intersection(set(true))) / len(true)
 
 
-def precision(estimated, true):
+def precision(estimated: list[int] | set[int], true: list[int] | set[int]) -> float:
     return len(set(estimated).intersection(set(true))) / len(estimated)
 
 
-def mse(estimated, true):
-    return np.mean((estimated - true) ** 2)
+def mse(estimated: torch.Tensor, true: torch.Tensor) -> float:
+    return torch.mean((estimated - true) ** 2).item()
 
 
-def main(m: int, n: int, s: float, output_dir: Path):
+def main(m: int, n: int, s: float, output_dir: Path, device: str | None = None):
+    output_dir.mkdir(exist_ok=True)
+
+    if device:
+        torch.set_default_device(device)
+    elif torch.cuda.is_available():
+        torch.set_default_device("cuda")
+    elif torch.backends.mps.is_available():
+        torch.set_default_device("mps")
+    else:
+        torch.set_default_device("cpu")
+
     sns.set()
 
     Phi = gen_dictionary(m, n)
     y, x = generate_measurements_and_coeffs(Phi, p=s)
-    true_support = set(np.where(x.ravel() != 0)[0])
+    breakpoint()
+    true_support = set(torch.where(x.ravel() != 0)[0])
     y = y.reshape(-1, 1)
     log_ip = ip(Phi, y, debug=None)
     log_omp = omp(Phi, y, debug=None)
