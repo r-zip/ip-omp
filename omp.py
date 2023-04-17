@@ -1,7 +1,8 @@
 import json
 import logging
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from copy import deepcopy
+from copy import copy
 from itertools import product
 from pathlib import Path
 
@@ -71,30 +72,6 @@ def generate_measurements_and_coeffs(Phi, p=0.01, noise_std=0.0):
     return (Phi @ x + noise_std * np.random.randn(m)).reshape(-1, 1), x.reshape(-1, 1)
 
 
-class Log:
-    def __init__(self, debug=None):
-        self.debug = set(debug or [])
-        self.keys = []
-
-    def log(self, key, value, context=None):
-        if not hasattr(self, key):
-            self.keys.append(key)
-            setattr(self, key, [])
-
-        if self.debug and context:
-            print(f"[{context}] {key}: {value}")
-        elif key in self.debug:
-            print(f"{key}: {value}")
-
-        getattr(self, key).append(deepcopy(value))
-
-    def to_dict(self):
-        return {k: getattr(self, k) for k in self.keys()}
-
-    def __repr__(self):
-        return f"Log({self.keys()})"
-
-
 def ip_objective(Phi, y, indices=None):
     P = projection(Phi[:, indices], perp=True)
     Phi_projected = P @ Phi
@@ -133,30 +110,30 @@ def ip_estimate_x(Phi, indices, y):
     return omp_estimate_x(Phi, indices, y)
 
 
-def ip(Phi, y, tol=1e-6, debug=False):
-    log = Log(debug=debug)
+def ip(Phi, y, tol=1e-6):
+    log = defaultdict(list)
     indices = []
     k = 0
     while True:
         logger.debug(f"Starting iteration {k} of IP")
         objective = ip_objective(Phi, y, indices=indices)
         max_objective = objective.max()
-        log.log("objective", max_objective.item())
+        log["objective"].append(max_objective.item())
         if np.abs(max_objective) < tol:
             break
         indices.append(np.argmax(objective).item())
-        log.log("indices", indices)
+        log["indices"].append(copy(indices))
         y_hat = ip_estimate_y(Phi, indices, y)
-        log.log("y_hat", y_hat)
+        log["y_hat"].append(y_hat)
         x_hat = ip_estimate_x(Phi, indices, y)
-        log.log("x_hat", x_hat)
+        log["x_hat"].append(x_hat)
         k += 1
 
     return log
 
 
-def omp(Phi, y, tol=1e-6, debug=False):
-    log = Log(debug=debug)
+def omp(Phi, y, tol=1e-6):
+    log = defaultdict(list)
     indices = []
     k = 0
     while True:
@@ -167,13 +144,13 @@ def omp(Phi, y, tol=1e-6, debug=False):
         if squared_error < tol:
             break
         objective = np.abs(Phi.T @ residual)
-        log.log("objective", objective.max().item())
+        log["objective"].append(objective.max().item())
         indices.append(np.argmax(objective).item())
-        log.log("indices", indices)
+        log["indices"].append(copy(indices))
         y_hat = ip_estimate_y(Phi, indices, y)
-        log.log("y_hat", y_hat)
+        log["y_hat"].append(y_hat)
         x_hat = omp_estimate_x(Phi, indices, y)
-        log.log("x_hat", x_hat)
+        log["x_hat"].append(x_hat)
         k += 1
 
     return log
