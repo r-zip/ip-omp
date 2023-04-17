@@ -198,7 +198,6 @@ def run_experiment(
     s: float,
     noise_std: float,
     output_dir: Path,
-    plot: bool = False,
 ):
     output_dir.mkdir(exist_ok=True)
     experiment_results_dir = output_dir / str(experiment_number)
@@ -211,7 +210,6 @@ def run_experiment(
         "sparsity": s,
         "noise_std": noise_std,
         "output_dir": str(output_dir),
-        "plot": plot,
     }
 
     records = []
@@ -281,7 +279,6 @@ def run_experiment(
 def _main(
     results_dir: Path,
     overwrite: bool = False,
-    plot: bool = False,
     jobs: int = 1,
 ):
     if results_dir.exists() and not overwrite:
@@ -304,7 +301,6 @@ def _main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
-                    plot=plot,
                 )
             )
         # progress bar
@@ -328,22 +324,20 @@ def _main(
                 s,
                 output_dir=results_dir,
                 noise_std=noise_std,
-                plot=plot,
             )
 
 
 def main(
     results_dir: Path,
     overwrite: bool = False,
-    plot: bool = False,
     jobs: int = 1,
     device: int = 0,
 ):
     if gpu:
         with np.cuda.Device(device):
-            _main(results_dir, overwrite, plot, jobs, device)
+            _main(results_dir, overwrite, jobs, device)
     else:
-        _main(results_dir, overwrite, plot, jobs, device)
+        _main(results_dir, overwrite, jobs, device)
 
 
 if __name__ == "__main__":
