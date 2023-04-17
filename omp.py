@@ -7,6 +7,11 @@ import numpy as np
 import seaborn as sns
 import typer
 
+try:
+    import cupy as np
+except ModuleNotFoundError:
+    pass
+
 plt.rcParams.update(
     {
         "text.usetex": True,
