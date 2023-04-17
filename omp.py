@@ -19,20 +19,22 @@ TRIALS = 20
 # fmt: off
 SETTINGS = {
     "dimensions": [
-        # (20, 50),
-        # (500, 800),
+        (20, 50),
+        (500, 800),
         (1600, 2400),
     ],
     "sparsity": [
-        # 0.01,
-        # 0.05,
-        # 0.1,
+        0.01,
+        0.05,
+        0.1,
         0.2,
+        0.3,
+        0.4,
     ],
     "noise_std": [
         0.0,
-        # 0.01,
-        # 0.1,
+        0.01,
+        0.1,
     ],
 }
 # fmt: on
@@ -269,6 +271,10 @@ def _main(
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
+            # skip high-sparsity, large scale experiments (they take too long)
+            if (m > 500 or n > 800) and s > 0.2:
+                continue
+
             futures.append(
                 pool.submit(
                     run_experiment,
