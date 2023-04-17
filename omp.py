@@ -103,7 +103,7 @@ def ip_estimate_y(Phi, indices, y):
 def omp_estimate_x(Phi, indices, y):
     Phi_t = Phi[:, indices]
     x_hat = np.zeros((Phi.shape[1], 1))
-    logger.debug(f"Computing pseudo-inverse estimate of x_hat")
+    logger.debug("Computing pseudo-inverse estimate of x_hat")
     x_hat[indices] = np.linalg.pinv(Phi_t) @ y
     return x_hat
 
@@ -112,11 +112,13 @@ def ip_estimate_x(Phi, indices, y):
     return omp_estimate_x(Phi, indices, y)
 
 
-def ip(Phi, y, tol=1e-6):
+def ip(Phi, y, sparsity, tol=1e-6):
     log = defaultdict(list)
     indices = []
     k = 0
     while True:
+        if k > SPARSITY_MULTIPLE * sparsity:
+            break
         logger.debug(f"Starting iteration {k} of IP")
         objective = ip_objective(Phi, y, indices=indices)
         max_objective = objective.max()
@@ -134,11 +136,13 @@ def ip(Phi, y, tol=1e-6):
     return log
 
 
-def omp(Phi, y, tol=1e-6):
+def omp(Phi, y, sparsity, tol=1e-6):
     log = defaultdict(list)
     indices = []
     k = 0
     while True:
+        if k > SPARSITY_MULTIPLE * sparsity:
+            break
         logger.debug(f"Starting iteration {k} of OMP")
         P = projection(Phi[:, indices], perp=True)
         residual = P @ y
@@ -203,9 +207,9 @@ def run_experiment(
         true_support = set(np.where(x.ravel() != 0)[0].tolist())
         y = y.reshape(-1, 1)
         logger.info("Running IP")
-        log_ip = ip(Phi, y, debug=None)
+        log_ip = ip(Phi, y, sparsity=np.count_nonzero(x))
         logger.info("Running OMP")
-        log_omp = omp(Phi, y, debug=None)
+        log_omp = omp(Phi, y, sparsity=np.count_nonzero(x))
 
         ip_recall = []
         omp_recall = []
@@ -318,9 +322,9 @@ def main(
 ):
     if gpu:
         with np.cuda.Device(device):
-            _main(results_dir, overwrite, jobs, device)
+            _main(results_dir, overwrite, jobs)
     else:
-        _main(results_dir, overwrite, jobs, device)
+        _main(results_dir, overwrite, jobs)
 
 
 if __name__ == "__main__":
