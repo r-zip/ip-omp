@@ -5,8 +5,6 @@ from copy import deepcopy
 from itertools import product
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import seaborn as sns
 import typer
 from rich.logging import RichHandler
 from tqdm import tqdm
