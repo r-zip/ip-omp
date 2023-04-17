@@ -2,10 +2,13 @@ import json
 import logging
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from contextlib import nullcontext
 from copy import copy
-from itertools import product
+from itertools import cycle, product
+from multiprocessing import cpu_count
 from pathlib import Path
 
+import GPUtil
 import typer
 from rich.logging import RichHandler
 from tqdm import tqdm
@@ -23,21 +26,21 @@ SPARSITY_MULTIPLE = 1
 SETTINGS = {
     "dimensions": [
         (20, 50),
-        (500, 800),
-        (1600, 2400),
+        # (500, 800),
+        # (1600, 2400),
     ],
     "sparsity": [
-        0.01,
-        0.05,
-        0.1,
-        0.2,
-        0.3,
+        # 0.01,
+        # 0.05,
+        # 0.1,
+        # 0.2,
+        # 0.3,
         0.4,
     ],
     "noise_std": [
         0.0,
-        0.01,
-        0.1,
+        # 0.01,
+        # 0.1,
     ],
 }
 # fmt: on
@@ -184,89 +187,98 @@ def run_experiment(
     s: float,
     noise_std: float,
     output_dir: Path,
+    device: int | None = None,
 ):
-    output_dir.mkdir(exist_ok=True)
-    experiment_results_dir = output_dir / str(experiment_number)
-    experiment_results_dir.mkdir(exist_ok=True)
+    if gpu:
+        # get device
+        context = np.cuda.Device(device)
+    else:
+        # dummy context manager
+        context = nullcontext()
 
-    settings = {
-        "experiment_number": experiment_number,
-        "m": m,
-        "n": n,
-        "sparsity": s,
-        "noise_std": noise_std,
-        "output_dir": str(output_dir),
-    }
+    with context:
+        output_dir.mkdir(exist_ok=True)
+        experiment_results_dir = output_dir / str(experiment_number)
+        experiment_results_dir.mkdir(exist_ok=True)
 
-    records = []
-    for trial in range(TRIALS):
-        logger.info(f"Starting trial {trial + 1} / {TRIALS}")
-        logger.info(
-            f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
-        )
-        Phi = gen_dictionary(m, n)
-        y, x = generate_measurements_and_coeffs(Phi, p=s, noise_std=noise_std)
-
-        true_support = set(np.where(x.ravel() != 0)[0].tolist())
-        y = y.reshape(-1, 1)
-        logger.info("Running IP")
-        log_ip = ip(Phi, y, sparsity=np.count_nonzero(x))
-        logger.info("Running OMP")
-        log_omp = omp(Phi, y, sparsity=np.count_nonzero(x))
-
-        ip_recall = []
-        omp_recall = []
-        ip_precision = []
-        omp_precision = []
-        ip_mse_y = []
-        omp_mse_y = []
-        ip_mse_x = []
-        omp_mse_x = []
-
-        logger.info("Generating metrics for IP")
-        for indices, x_hat, y_hat in zip(
-            log_ip["indices"], log_ip["x_hat"], log_ip["y_hat"]
-        ):
-            ip_recall.append(recall(indices, true_support))
-            ip_precision.append(precision(indices, true_support))
-            ip_mse_x.append(mse(x_hat, x))
-            ip_mse_y.append(mse(y_hat, y))
-
-        logger.info("Generating metrics for OMP")
-        for indices, x_hat, y_hat in zip(
-            log_omp["indices"], log_omp["x_hat"], log_omp["y_hat"]
-        ):
-            omp_recall.append(recall(indices, true_support))
-            omp_precision.append(precision(indices, true_support))
-            omp_mse_x.append(mse(x_hat, x))
-            omp_mse_y.append(mse(y_hat, y))
-
-        results = {
-            "precision_ip": ip_precision,
-            "precision_omp": omp_precision,
-            "recall_ip": ip_recall,
-            "recall_omp": omp_recall,
-            "mse_x_ip": ip_mse_x,
-            "mse_x_omp": omp_mse_x,
-            "mse_y_ip": ip_mse_y,
-            "mse_y_omp": omp_mse_y,
-            "iters_ip": len(log_ip.indices),
-            "iters_omp": len(log_omp.indices),
-            "max_objective_ip": log_ip.objective,
-            "max_objective_omp": log_omp.objective,
+        settings = {
+            "experiment_number": experiment_number,
+            "m": m,
+            "n": n,
+            "sparsity": s,
+            "noise_std": noise_std,
+            "output_dir": str(output_dir),
         }
 
-        with open(experiment_results_dir / "results_{trial}.json", "w") as f:
-            json.dump(results, f)
+        records = []
+        for trial in range(TRIALS):
+            logger.info(f"Starting trial {trial + 1} / {TRIALS}")
+            logger.info(
+                f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
+            )
+            Phi = gen_dictionary(m, n)
+            y, x = generate_measurements_and_coeffs(Phi, p=s, noise_std=noise_std)
 
-        records.append(results)
+            true_support = set(np.where(x.ravel() != 0)[0].tolist())
+            y = y.reshape(-1, 1)
+            logger.info("Running IP")
+            log_ip = ip(Phi, y, sparsity=np.count_nonzero(x))
+            logger.info("Running OMP")
+            log_omp = omp(Phi, y, sparsity=np.count_nonzero(x))
 
-    logger.info(f"Saving metrics to {experiment_results_dir / 'results.json'}")
-    with open(experiment_results_dir / "results.json", "w") as f:
-        json.dump({**settings, "results": records}, f)
+            ip_recall = []
+            omp_recall = []
+            ip_precision = []
+            omp_precision = []
+            ip_mse_y = []
+            omp_mse_y = []
+            ip_mse_x = []
+            omp_mse_x = []
+
+            logger.info("Generating metrics for IP")
+            for indices, x_hat, y_hat in zip(
+                log_ip["indices"], log_ip["x_hat"], log_ip["y_hat"]
+            ):
+                ip_recall.append(recall(indices, true_support))
+                ip_precision.append(precision(indices, true_support))
+                ip_mse_x.append(mse(x_hat, x))
+                ip_mse_y.append(mse(y_hat, y))
+
+            logger.info("Generating metrics for OMP")
+            for indices, x_hat, y_hat in zip(
+                log_omp["indices"], log_omp["x_hat"], log_omp["y_hat"]
+            ):
+                omp_recall.append(recall(indices, true_support))
+                omp_precision.append(precision(indices, true_support))
+                omp_mse_x.append(mse(x_hat, x))
+                omp_mse_y.append(mse(y_hat, y))
+
+            results = {
+                "precision_ip": ip_precision,
+                "precision_omp": omp_precision,
+                "recall_ip": ip_recall,
+                "recall_omp": omp_recall,
+                "mse_x_ip": ip_mse_x,
+                "mse_x_omp": omp_mse_x,
+                "mse_y_ip": ip_mse_y,
+                "mse_y_omp": omp_mse_y,
+                "iters_ip": len(log_ip["indices"]),
+                "iters_omp": len(log_omp["indices"]),
+                "max_objective_ip": log_ip["objective"],
+                "max_objective_omp": log_omp["objective"],
+            }
+
+            with open(experiment_results_dir / f"results_{trial}.json", "w") as f:
+                json.dump(results, f)
+
+            records.append(results)
+
+        logger.info(f"Saving metrics to {experiment_results_dir / 'results.json'}")
+        with open(experiment_results_dir / "results.json", "w") as f:
+            json.dump({**settings, "results": records}, f)
 
 
-def _main(
+def main(
     results_dir: Path,
     overwrite: bool = False,
     jobs: int = 1,
@@ -277,7 +289,15 @@ def _main(
         )
 
     if jobs > 1:
-        pool = ProcessPoolExecutor(max_workers=jobs)
+        if gpu:
+            gpu_list = [g.id for g in GPUtil.getAvailable(maxLoad=0.2, maxMemory=0.2)]
+            workers = len(gpu_list)
+        else:
+            workers = cpu_count()
+
+        pool = ProcessPoolExecutor(max_workers=workers)
+
+        gpus = cycle(gpu_list)
         futures = []
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
@@ -295,6 +315,7 @@ def _main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
+                    device=next(gpus),
                 )
             )
         # progress bar
@@ -319,19 +340,6 @@ def _main(
                 output_dir=results_dir,
                 noise_std=noise_std,
             )
-
-
-def main(
-    results_dir: Path,
-    overwrite: bool = False,
-    jobs: int = 1,
-    device: int = 0,
-):
-    if gpu:
-        with np.cuda.Device(device):
-            _main(results_dir, overwrite, jobs)
-    else:
-        _main(results_dir, overwrite, jobs)
 
 
 if __name__ == "__main__":
