@@ -6,9 +6,9 @@ from itertools import product
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from rich.logging import RichHandler
 import seaborn as sns
 import typer
+from rich.logging import RichHandler
 from tqdm import tqdm
 
 logging.basicConfig(
@@ -16,16 +16,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
-TRIALS = 100
+TRIALS = 20
+# fmt: off
 SETTINGS = {
-    "dimensions": [(500, 800), (1600, 2400)],
-    "sparsity": [0.01, 0.05, 0.1, 0.2, 0.3, 0.4],
-    "noise_std": [0.0, 0.01, 0.1],
+    "dimensions": [
+        # (20, 50),
+        # (500, 800),
+        (1600, 2400),
+    ],
+    "sparsity": [
+        # 0.01,
+        # 0.05,
+        # 0.1,
+        0.2,
+    ],
+    "noise_std": [
+        0.0,
+        # 0.01,
+        # 0.1,
+    ],
 }
+# fmt: on
+
 
 try:
     import cupy as np
+
+    gpu = True
 except ModuleNotFoundError:
+    gpu = False
     logger.info("cupy installation not found. Falling back to numpy.")
     import numpy as np
 
@@ -36,6 +55,7 @@ def gen_dictionary(m, n):
 
 
 def projection(Phi_t, perp=False):
+    logger.debug(f"Computing projection for {Phi_t.shape[1]} columns of Phi")
     U, *_ = np.linalg.svd(Phi_t, full_matrices=False)
     P = U @ U.T
 
@@ -106,6 +126,7 @@ def ip_estimate_y(Phi, indices, y):
 def omp_estimate_x(Phi, indices, y):
     Phi_t = Phi[:, indices]
     x_hat = np.zeros((Phi.shape[1], 1))
+    logger.debug(f"Computing pseudo-inverse estimate of x_hat")
     x_hat[indices] = np.linalg.pinv(Phi_t) @ y
     return x_hat
 
@@ -117,10 +138,12 @@ def ip_estimate_x(Phi, indices, y):
 def ip(Phi, y, tol=1e-6, debug=False):
     log = Log(debug=debug)
     indices = []
+    k = 0
     while True:
+        logger.debug(f"Starting iteration {k} of IP")
         objective = ip_objective(Phi, y, indices=indices)
         max_objective = objective.max()
-        log.log("objective", max_objective)
+        log.log("objective", max_objective.item())
         if np.abs(max_objective) < tol:
             break
         indices.append(np.argmax(objective).item())
@@ -129,6 +152,7 @@ def ip(Phi, y, tol=1e-6, debug=False):
         log.log("y_hat", y_hat)
         x_hat = ip_estimate_x(Phi, indices, y)
         log.log("x_hat", x_hat)
+        k += 1
 
     return log
 
@@ -136,20 +160,23 @@ def ip(Phi, y, tol=1e-6, debug=False):
 def omp(Phi, y, tol=1e-6, debug=False):
     log = Log(debug=debug)
     indices = []
+    k = 0
     while True:
+        logger.debug(f"Starting iteration {k} of OMP")
         P = projection(Phi[:, indices], perp=True)
         residual = P @ y
         squared_error = residual.T @ residual
         if squared_error < tol:
             break
         objective = np.abs(Phi.T @ residual)
-        log.log("objective", objective.max())
+        log.log("objective", objective.max().item())
         indices.append(np.argmax(objective).item())
         log.log("indices", indices)
         y_hat = ip_estimate_y(Phi, indices, y)
         log.log("y_hat", y_hat)
         x_hat = omp_estimate_x(Phi, indices, y)
         log.log("x_hat", x_hat)
+        k += 1
 
     return log
 
@@ -163,7 +190,7 @@ def precision(estimated, true):
 
 
 def mse(estimated, true):
-    return np.mean((estimated - true) ** 2)
+    return np.mean((estimated - true) ** 2).item()
 
 
 def run_experiment(
@@ -179,113 +206,86 @@ def run_experiment(
     experiment_results_dir = output_dir / str(experiment_number)
     experiment_results_dir.mkdir(exist_ok=True)
 
-    logger.info(
-        f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
-    )
-    Phi = gen_dictionary(m, n)
-    y, x = generate_measurements_and_coeffs(Phi, p=s, noise_std=noise_std)
-    true_support = set(np.where(x.ravel() != 0)[0])
-    y = y.reshape(-1, 1)
-    logger.info("Running IP")
-    log_ip = ip(Phi, y, debug=None)
-    logger.info("Running OMP")
-    log_omp = omp(Phi, y, debug=None)
-
-    ip_recall = []
-    omp_recall = []
-    ip_precision = []
-    omp_precision = []
-    ip_mse_y = []
-    omp_mse_y = []
-    ip_mse_x = []
-    omp_mse_x = []
-
-    logger.info("Generating metrics for IP")
-    for indices, x_hat, y_hat in zip(log_ip.indices, log_ip.x_hat, log_ip.y_hat):
-        ip_recall.append(recall(indices, true_support))
-        ip_precision.append(precision(indices, true_support))
-        ip_mse_x.append(mse(x_hat, x))
-        ip_mse_y.append(mse(y_hat, y))
-
-    logger.info("Generating metrics for OMP")
-    for indices, x_hat, y_hat in zip(log_omp.indices, log_omp.x_hat, log_omp.y_hat):
-        omp_recall.append(recall(indices, true_support))
-        omp_precision.append(precision(indices, true_support))
-        omp_mse_x.append(mse(x_hat, x))
-        omp_mse_y.append(mse(y_hat, y))
-
-    if plot:
-        sns.set()
-        plt.rcParams.update(
-            {
-                "text.usetex": True,
-                "font.family": "Helvetica",
-            }
-        )
-
-        plt.plot(omp_recall)
-        plt.plot(ip_recall, "--")
-        plt.legend(["OMP", "IP"])
-        plt.xlabel("Iteration")
-        plt.ylabel(
-            r"$\frac{|\mathrm{supp}(\widehat{x}) \, \cap \, \mathrm{supp}(x)|}{|\mathrm{supp}(x)|}$",
-            fontsize="x-large",
-        )
-        plt.title("Recall of estimated support")
-        plt.savefig(experiment_results_dir / "recall.png", dpi=300)
-        plt.close()
-
-        plt.plot(omp_precision)
-        plt.plot(ip_precision, "--")
-        plt.legend(["OMP", "IP"])
-        plt.xlabel("Iteration")
-        plt.ylabel(
-            r"$\frac{|\mathrm{supp}(\widehat{x}) \, \cap \, \mathrm{supp}(x)|}{|\mathrm{supp}(\widehat{x})|}$",
-            fontsize="x-large",
-        )
-        plt.title("Precision of estimated support")
-        plt.savefig(experiment_results_dir / "precision.png", dpi=300)
-        plt.close()
-
-        plt.plot(omp_mse_x)
-        plt.plot(ip_mse_x, "--")
-        plt.legend(["OMP", "IP"])
-        plt.xlabel("Iteration")
-        plt.ylabel(r"$\|x - \widehat{x}\|_2^2$")
-        plt.title("MSE of Sparse Code Estimate")
-        plt.savefig(experiment_results_dir / "mse_x.png", dpi=300)
-        plt.close()
-
-        plt.plot(omp_mse_y)
-        plt.plot(ip_mse_y, "--")
-        plt.legend(["OMP", "IP"])
-        plt.xlabel("Iteration")
-        plt.ylabel(r"$\|y - \widehat{y}\|_2^2$")
-        plt.title("MSE of Measurement Estimate")
-        plt.savefig(experiment_results_dir / "mse_y.png", dpi=300)
-        plt.close()
-
-    results = {
-        "precision_ip": ip_precision,
-        "precision_omp": omp_precision,
-        "recall_ip": ip_recall,
-        "recall_omp": omp_recall,
-        "mse_x_ip": ip_mse_x,
-        "mse_x_omp": omp_mse_x,
-        "mse_y_ip": ip_mse_y,
-        "mse_y_omp": omp_mse_y,
-        "iters_ip": len(log_ip.indices),
-        "iters_omp": len(log_omp.indices),
-        "max_objective_ip": log_ip.objective,
-        "max_objective_omp": log_omp.objective,
+    settings = {
+        "experiment_number": experiment_number,
+        "m": m,
+        "n": n,
+        "sparsity": s,
+        "noise_std": noise_std,
+        "output_dir": str(output_dir),
+        "plot": plot,
     }
+
+    records = []
+    for trial in range(TRIALS):
+        logger.info(f"Starting trial {trial + 1} / {TRIALS}")
+        logger.info(
+            f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
+        )
+        Phi = gen_dictionary(m, n)
+        y, x = generate_measurements_and_coeffs(Phi, p=s, noise_std=noise_std)
+
+        true_support = set(np.where(x.ravel() != 0)[0].tolist())
+        y = y.reshape(-1, 1)
+        logger.info("Running IP")
+        log_ip = ip(Phi, y, debug=None)
+        logger.info("Running OMP")
+        log_omp = omp(Phi, y, debug=None)
+
+        ip_recall = []
+        omp_recall = []
+        ip_precision = []
+        omp_precision = []
+        ip_mse_y = []
+        omp_mse_y = []
+        ip_mse_x = []
+        omp_mse_x = []
+
+        logger.info("Generating metrics for IP")
+        for indices, x_hat, y_hat in zip(log_ip.indices, log_ip.x_hat, log_ip.y_hat):
+            ip_recall.append(recall(indices, true_support))
+            ip_precision.append(precision(indices, true_support))
+            ip_mse_x.append(mse(x_hat, x))
+            ip_mse_y.append(mse(y_hat, y))
+
+        logger.info("Generating metrics for OMP")
+        for indices, x_hat, y_hat in zip(log_omp.indices, log_omp.x_hat, log_omp.y_hat):
+            omp_recall.append(recall(indices, true_support))
+            omp_precision.append(precision(indices, true_support))
+            omp_mse_x.append(mse(x_hat, x))
+            omp_mse_y.append(mse(y_hat, y))
+
+        results = {
+            "precision_ip": ip_precision,
+            "precision_omp": omp_precision,
+            "recall_ip": ip_recall,
+            "recall_omp": omp_recall,
+            "mse_x_ip": ip_mse_x,
+            "mse_x_omp": omp_mse_x,
+            "mse_y_ip": ip_mse_y,
+            "mse_y_omp": omp_mse_y,
+            "iters_ip": len(log_ip.indices),
+            "iters_omp": len(log_omp.indices),
+            "max_objective_ip": log_ip.objective,
+            "max_objective_omp": log_omp.objective,
+        }
+
+        with open(experiment_results_dir / "results_{trial}.json", "w") as f:
+            json.dump(results, f)
+
+        records.append(results)
 
     logger.info(f"Saving metrics to {experiment_results_dir / 'results.json'}")
     with open(experiment_results_dir / "results.json", "w") as f:
-        json.dump(results, f)
+        json.dump({**settings, "results": records}, f)
 
 
-def main(results_dir: Path, overwrite: bool = False, plot: bool = False, jobs: int = 1):
+def _main(
+    results_dir: Path,
+    overwrite: bool = False,
+    plot: bool = False,
+    jobs: int = 1,
+):
     if results_dir.exists() and not overwrite:
         FileExistsError(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
@@ -332,6 +332,20 @@ def main(results_dir: Path, overwrite: bool = False, plot: bool = False, jobs: i
                 noise_std=noise_std,
                 plot=plot,
             )
+
+
+def main(
+    results_dir: Path,
+    overwrite: bool = False,
+    plot: bool = False,
+    jobs: int = 1,
+    device: int = 0,
+):
+    if gpu:
+        with np.cuda.Device(device):
+            _main(results_dir, overwrite, plot, jobs, device)
+    else:
+        _main(results_dir, overwrite, plot, jobs, device)
 
 
 if __name__ == "__main__":
