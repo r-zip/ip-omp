@@ -11,11 +11,14 @@ from rich.logging import RichHandler
 from tqdm import tqdm
 
 logging.basicConfig(
-    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+    level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
 )
 logger = logging.getLogger()
 
 TRIALS = 20
+SPARSITY_MULTIPLE = 1
+
+
 # fmt: off
 SETTINGS = {
     "dimensions": [
