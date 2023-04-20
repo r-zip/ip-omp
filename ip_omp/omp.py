@@ -4,7 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import nullcontext
 from copy import copy
-from itertools import cycle, product
+from itertools import chain, cycle, product, repeat
 from multiprocessing import cpu_count
 from pathlib import Path
 
@@ -205,9 +205,13 @@ def run_experiment(
     output_dir: Path,
     device: int | None = None,
 ):
-    if gpu:
+    if gpu and device is not None:
         # get device
         context = np.cuda.Device(device)
+    elif gpu:
+        context = np.cuda.Device(
+            GPUtil.getFirstAvailable(order="load", maxLoad=1.0, maxMemory=1.0)
+        )
     else:
         # dummy context manager
         context = nullcontext()
@@ -313,6 +317,7 @@ def main(
             ]
             workers = len(gpu_list)
         else:
+            gpu_list = []
             workers = min(jobs, cpu_count())
 
         if workers < jobs:
@@ -322,15 +327,11 @@ def main(
 
         pool = ProcessPoolExecutor(max_workers=workers)
 
-        gpus = cycle(gpu_list)
+        gpus = chain(gpu_list, repeat(None))
         futures = []
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
-            # skip high-sparsity, large scale experiments (they take too long)
-            if (m > 500 or n > 800) and s > 0.2:
-                continue
-
             futures.append(
                 pool.submit(
                     run_experiment,
