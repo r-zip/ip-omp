@@ -4,7 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import nullcontext
 from copy import copy
-from itertools import chain, cycle, product, repeat
+from itertools import chain, product, repeat
 from multiprocessing import cpu_count
 from pathlib import Path
 
