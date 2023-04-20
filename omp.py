@@ -125,7 +125,7 @@ def ip(Phi, y, sparsity, tol=1e-6):
     indices = []
     k = 0
     while True:
-        if k > SPARSITY_MULTIPLE * sparsity:
+        if k >= SPARSITY_MULTIPLE * sparsity:
             break
         logger.debug(f"Starting iteration {k} of IP")
         objective = ip_objective(Phi, y, indices=indices)
@@ -152,7 +152,7 @@ def omp(Phi, y, sparsity, tol=1e-6):
     indices = []
     k = 0
     while True:
-        if k > SPARSITY_MULTIPLE * sparsity:
+        if k >= SPARSITY_MULTIPLE * sparsity:
             break
         logger.debug(f"Starting iteration {k} of OMP")
         P = projection(Phi[:, indices], perp=True)
@@ -189,7 +189,7 @@ def mse(estimated, true):
 
 
 def mutual_coherence(Phi):
-    return np.max(np.abs(np.diag(Phi.T @ Phi)))
+    return np.max(np.abs(np.triu(Phi.T @ Phi)))
 
 
 def run_experiment(
