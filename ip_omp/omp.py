@@ -184,6 +184,10 @@ def precision(estimated, true):
     return len(set(estimated).intersection(set(true))) / len(estimated)
 
 
+def iou(estimated, true):
+    return len(set(estimated).intersection(true)) / len(set(estimated).union(true))
+
+
 def mse(estimated, true):
     return np.mean((estimated - true) ** 2).item()
 
