@@ -157,9 +157,9 @@ def omp(Phi, y, sparsity, tol=1e-6):
         logger.debug(f"Starting iteration {k} of OMP")
         P = projection(Phi[:, indices], perp=True)
         residual = P @ y
-        squared_error = residual.T @ residual
 
         # TODO: rethink termination criterion
+        # squared_error = residual.T @ residual
         # if squared_error < tol:
         #     break
 
