@@ -254,13 +254,14 @@ def run_experiment(
             )
             Phi = gen_dictionary(m, n)
             y, x = generate_measurements_and_coeffs(Phi, p=s, noise_std=noise_std)
+            nnz = np.count_nonzero(x)
 
             true_support = set(np.where(x.ravel() != 0)[0].tolist())
             y = y.reshape(-1, 1)
             logger.info("Running IP")
-            log_ip = ip(Phi, y, sparsity=np.count_nonzero(x))
+            log_ip = ip(Phi, y, sparsity=nnz)
             logger.info("Running OMP")
-            log_omp = omp(Phi, y, sparsity=np.count_nonzero(x))
+            log_omp = omp(Phi, y, sparsity=nnz)
 
             ip_precision = []
             ip_recall = []
@@ -308,6 +309,9 @@ def run_experiment(
                 "max_objective_ip": log_ip["objective"],
                 "max_objective_omp": log_omp["objective"],
                 "iou": ious,
+                "nnz": nnz,
+                "norm_x": np.linalg.norm(x),
+                "norm_y": np.linalg.norm(y),
             }
 
             intermediate_results_file = experiment_results_dir / f"results_{trial}.json"
