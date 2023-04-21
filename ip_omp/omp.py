@@ -296,7 +296,7 @@ def run_experiment(
                 "iters_omp": len(log_omp["indices"]),
                 "max_objective_ip": log_ip["objective"],
                 "max_objective_omp": log_omp["objective"],
-                "iou": iou(log_ip["indices"], log_omp["indices"]),
+                "iou": iou(log_ip["indices"][-1], log_omp["indices"][-1]),
             }
 
             with open(experiment_results_dir / f"results_{trial}.json", "w") as f:
