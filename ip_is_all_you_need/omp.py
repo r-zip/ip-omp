@@ -240,6 +240,7 @@ def run_experiment(
         }
 
         records = []
+        intermediate_results_files = []
         for trial in range(TRIALS):
             logger.info(f"Starting trial {trial + 1} / {TRIALS}")
             logger.info(
@@ -302,7 +303,8 @@ def run_experiment(
                 "iou": ious,
             }
 
-            with open(experiment_results_dir / f"results_{trial}.json", "w") as f:
+            intermediate_results_file = experiment_results_dir / f"results_{trial}.json"
+            with open(intermediate_results_file, "w") as f:
                 json.dump(results, f)
 
             records.append(results)
@@ -310,6 +312,11 @@ def run_experiment(
         logger.info(f"Saving metrics to {experiment_results_dir / 'results.json'}")
         with open(experiment_results_dir / "results.json", "w") as f:
             json.dump({**settings, "results": records}, f)
+
+        # clean up intermediate results files
+        for path in intermediate_results_files:
+            if path.stem.endswith(tuple("0123456789")):
+                path.unlink()
 
 
 def main(
