@@ -210,7 +210,7 @@ def run_experiment(
         context = np.cuda.Device(device)
     elif gpu:
         context = np.cuda.Device(
-            GPUtil.getFirstAvailable(order="load", maxLoad=1.0, maxMemory=1.0)
+            GPUtil.getFirstAvailable(order="load", maxLoad=1.0, maxMemory=1.0)[0]
         )
     else:
         # dummy context manager
@@ -366,6 +366,8 @@ def main(
                 output_dir=results_dir,
                 noise_std=noise_std,
             )
+
+    logger.info("Done!")
 
 
 if __name__ == "__main__":
