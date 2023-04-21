@@ -2,3 +2,5 @@
 .DS_Store
 /results/
 poetry.lock
+/figures/
+/notes.md
