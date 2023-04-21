@@ -4,6 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import nullcontext
 from copy import copy
+from enum import Enum
 from itertools import chain, product, repeat
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -211,11 +212,11 @@ def run_experiment(
     s: float,
     noise_std: float,
     output_dir: Path,
-    device: int | None = None,
+    gpu_number: int | None = None,
 ) -> None:
-    if gpu and device is not None:
+    if gpu and gpu_number is not None:
         # get device
-        context = np.cuda.Device(device)
+        context = np.cuda.Device(gpu_number)
     elif gpu:
         context = np.cuda.Device(
             GPUtil.getFirstAvailable(order="load", maxLoad=1.0, maxMemory=1.0)[0]
@@ -319,18 +320,30 @@ def run_experiment(
                 path.unlink()
 
 
+class Device(str, Enum):
+    CPU = "cpu"
+    GPU = "gpu"
+
+
 def main(
     results_dir: Path,
     overwrite: bool = False,
     jobs: int = 1,
+    device: Device | None = None,
 ):
+    if device == Device.GPU and not gpu:
+        raise typer.BadParameter("GPU support has not been installed.")
+
+    if device is None:
+        device = Device.GPU if gpu else Device.CPU
+
     if results_dir.exists() and not overwrite:
         FileExistsError(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
     if jobs > 1:
-        if gpu:
+        if device == device.GPU:
             gpu_list = [
                 g for g in GPUtil.getAvailable(maxLoad=0.2, maxMemory=0.2, limit=jobs)
             ]
@@ -360,7 +373,7 @@ def main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
-                    device=next(gpus),
+                    gpu_number=next(gpus),
                 )
             )
         # progress bar
