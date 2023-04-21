@@ -47,6 +47,8 @@ SETTINGS = {
 }
 # fmt: on
 
+NUM_SETTINGS = len(list(product(*list(SETTINGS.values()))))
+
 
 try:
     import cupy as np
@@ -328,7 +330,7 @@ class Device(str, Enum):
 def main(
     results_dir: Path,
     overwrite: bool = False,
-    jobs: int = 1,
+    jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS),
     device: Device | None = None,
 ):
     if device == Device.GPU and not gpu:
