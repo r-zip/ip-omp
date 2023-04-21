@@ -1,4 +1,3 @@
-# %%
 import json
 from pathlib import Path
 
@@ -10,7 +9,7 @@ import seaborn as sns
 
 sns.set()
 
-# %%
+
 def load(
     path: Path,
 ) -> tuple[pd.DataFrame, dict[str, np.ndarray], dict[str, int | float | str]]:
@@ -60,7 +59,6 @@ def load(
     return df, interpolated, settings
 
 
-# %%
 def key_to_ylabel(key: str) -> str:
     if key in ["precision", "recall"]:
         return key.title()
@@ -110,17 +108,12 @@ def plot(interpolated: dict[str, np.ndarray], settings: dict[str, float], path: 
         plt.close()
 
 
-# %%
-list(Path("results").iterdir())
-
-# %%
 dfs = []
 for path in Path("results").iterdir():
-    if path.stem == "15":
-        if path.is_dir() and (path / "results.json").exists():
-            df, interpolated, settings = load(path)
-            plot(interpolated, settings, path)
-            dfs.append(df)
+    if path.is_dir() and (path / "results.json").exists():
+        df, interpolated, settings = load(path)
+        plot(interpolated, settings, path)
+        dfs.append(df)
 df = pd.concat(dfs, ignore_index=True)
 df_long = pd.wide_to_long(
     df,
