@@ -255,15 +255,10 @@ def run_experiment(
             logger.info("Running OMP")
             log_omp = omp(Phi, y, sparsity=np.count_nonzero(x))
 
-            ip_recall = []
-            omp_recall = []
             ip_precision = []
-            omp_precision = []
-            ip_mse_y = []
-            omp_mse_y = []
+            ip_recall = []
             ip_mse_x = []
-            omp_mse_x = []
-
+            ip_mse_y = []
             logger.info("Generating metrics for IP")
             for indices, x_hat, y_hat in zip(
                 log_ip["indices"], log_ip["x_hat"], log_ip["y_hat"]
@@ -273,6 +268,10 @@ def run_experiment(
                 ip_mse_x.append(mse(x_hat, x))
                 ip_mse_y.append(mse(y_hat, y))
 
+            omp_precision = []
+            omp_recall = []
+            omp_mse_x = []
+            omp_mse_y = []
             logger.info("Generating metrics for OMP")
             for indices, x_hat, y_hat in zip(
                 log_omp["indices"], log_omp["x_hat"], log_omp["y_hat"]
@@ -281,6 +280,10 @@ def run_experiment(
                 omp_precision.append(precision(indices, true_support))
                 omp_mse_x.append(mse(x_hat, x))
                 omp_mse_y.append(mse(y_hat, y))
+
+            ious = []
+            for indices_ip, indices_omp in zip(log_ip["indices"], log_omp["indices"]):
+                ious.append(iou(indices_ip, indices_omp))
 
             results = {
                 "coherence": mutual_coherence(Phi),
@@ -296,7 +299,7 @@ def run_experiment(
                 "iters_omp": len(log_omp["indices"]),
                 "max_objective_ip": log_ip["objective"],
                 "max_objective_omp": log_omp["objective"],
-                "iou": iou(log_ip["indices"][-1], log_omp["indices"][-1]),
+                "iou": ious,
             }
 
             with open(experiment_results_dir / f"results_{trial}.json", "w") as f:
