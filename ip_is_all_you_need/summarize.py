@@ -90,6 +90,9 @@ def key_to_ylabel(key: str) -> str:
     elif key.startswith("mse_y"):
         return r"$||\widehat{y} - y||_2^2$"
 
+    elif key == "iou":
+        return r"$\frac{|\Lambda_{\mathrm{IP}} \cap \Lambda_{\mathrm{OMP}}|}{|\Lambda_{\mathrm{IP}} \cup \Lambda_{\mathrm{OMP}}|}$"
+
     return "Maximum Objective"
 
 
@@ -112,6 +115,7 @@ def plot(interpolated: dict[str, np.ndarray], settings: dict[str, float], path: 
         mean_omp = np.mean(omp, axis=0)
         lo_omp = np.quantile(omp, 0.25, axis=0)
         hi_omp = np.quantile(omp, 0.75, axis=0)
+
         plt.figure()
         plt.plot(x, mean_omp)
         plt.fill_between(x, lo_omp, hi_omp, alpha=0.3)
@@ -127,6 +131,29 @@ def plot(interpolated: dict[str, np.ndarray], settings: dict[str, float], path: 
         plt.tight_layout()
         plt.savefig(path / f"{key}.png", dpi=300)
         plt.close()
+
+    # iou
+    iou = interpolated["iou"]
+    mean_iou = np.mean(iou, axis=0)
+    lo_iou = np.quantile(iou, 0.25, axis=0)
+    hi_iou = np.quantile(iou, 0.75, axis=0)
+    n = interpolated["iou"].shape[1]
+    x = np.arange(1, n + 1) / n
+
+    m, n, s = settings["m"], settings["n"], settings["sparsity"]
+    plt.figure()
+    plt.plot(x, mean_iou)
+    plt.fill_between(x, lo_iou, hi_iou, alpha=0.3)
+    plt.legend(["IoU Mean", "IoU IQR"])
+    plt.title(
+        rf"{m=}, {n=}, $\mathrm{{IoU}}(\Lambda_{{\mathrm{{IP}}}}, \Lambda_{{\mathrm{{OMP}}}})$"
+    )
+    plt.xlabel("Fraction of Iterations Completed $k / s$")
+    plt.ylabel(key_to_ylabel("iou"), fontsize="x-large")
+    plt.ylim((-0.025, 1.025))
+    plt.tight_layout()
+    plt.savefig(path / f"iou.png", dpi=300)
+    plt.close()
 
 
 def main():
