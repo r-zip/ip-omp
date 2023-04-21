@@ -103,14 +103,25 @@ test = ["Pillow", "matplotlib", "pytest"]
 test-no-images = ["pytest"]
 
 [[package]]
-name = "cupy"
+name = "cupy-cuda102"
 version = "12.0.0"
 description = "CuPy: NumPy & SciPy for GPU"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "cupy-12.0.0.tar.gz", hash = "sha256:61ddbbef73d50d606bd5087570645f3c91ec9176c2566784c1d486d6a3404545"},
+    {file = "cupy_cuda102-12.0.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:9bd99fbe215eec6f2b049bf3740391d95abe9b3cbebea6a195168ccc3ae76eec"},
+    {file = "cupy_cuda102-12.0.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:404143a9ca89a047a7e950ed81130594f534cacc1611dc14000b901ebf9c987a"},
+    {file = "cupy_cuda102-12.0.0-cp310-cp310-win_amd64.whl", hash = "sha256:aa0ba73a5ceb699f62383be7ffde8057df9281a46a209dfbb623b5c3d571ba6d"},
+    {file = "cupy_cuda102-12.0.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:fc4b9dfc9d61300c121564e87e0afa2189b012183af49e876105688c7d62c101"},
+    {file = "cupy_cuda102-12.0.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:e46fa1fef53873500382734b0e7450103043c770554155bd54ad470725deed31"},
+    {file = "cupy_cuda102-12.0.0-cp311-cp311-win_amd64.whl", hash = "sha256:8db6042d9c78d5fdf4aed1fa87d0800a89580a9ab4e20cc3836df1eb769de494"},
+    {file = "cupy_cuda102-12.0.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:020ec18b6062f17361041d5b1dae75988cd5bcd760523c0e6cb2ac4613035aa1"},
+    {file = "cupy_cuda102-12.0.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:592f32513b279d838e1b0fde4622e72391575169712845758150a9e649818178"},
+    {file = "cupy_cuda102-12.0.0-cp38-cp38-win_amd64.whl", hash = "sha256:232eadf6847f0503132454f3a3650dc84e0def314d033543b7b26468044b3485"},
+    {file = "cupy_cuda102-12.0.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:d9629f09c942a286a968d6e173467cbffda5ae6dcae61e9e39251ad3f7f88215"},
+    {file = "cupy_cuda102-12.0.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:c67093bb5dc53a3761f68b23a07f3f6f04b15e787ef9be3dc57452108299f809"},
+    {file = "cupy_cuda102-12.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:6855f7424c4ceab936a2e31a1c0d2521e7a2f9a086eb5238b2f8f337a4d9564f"},
 ]
 
 [package.dependencies]
@@ -139,7 +150,7 @@ name = "fastrlock"
 version = "0.8.1"
 description = "Fast, re-entrant optimistic lock implemented in Cython"
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "fastrlock-0.8.1-cp27-cp27m-macosx_10_15_x86_64.whl", hash = "sha256:e88ad64610f709daf6763fcb73b1640489d6cc3065761f0a9a42e83e0a0ce8da"},
@@ -790,7 +801,10 @@ files = [
     {file = "tzdata-2023.3.tar.gz", hash = "sha256:11ef1e08e54acb0d4f95bdb1be05da659673de4acbd21bf9c69e94cc5e907a3a"},
 ]
 
+[extras]
+gpu = ["gputil"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "cda164322358fcfdbc94ec01636e8d5548e529a4dfbf0fcffb7366bd84cfc8e6"
+content-hash = "19f60f2909e92b24a8e51272917d855635ba26976434c0c697fa7724a2369ca7"
