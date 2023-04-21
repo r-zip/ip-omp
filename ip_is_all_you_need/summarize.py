@@ -185,8 +185,6 @@ def main():
         mse_y=df_long["mse_y"] / (df_long["n"] * df_long["sparsity"])
     )
 
-    (dfs[-1]["precision_ip"] == dfs[-1]["recall_ip"]).all()
-
     fig_path = Path("./figures")
     fig_path.mkdir(exist_ok=True)
     metrics = ["precision", "recall", "mse_x", "mse_y", "iou"]
@@ -199,7 +197,6 @@ def main():
         "mse_y": r"$||\widehat{y} - y||_2^2$",
         "iou": "IP/OMP Support IoU",
     }
-
     for metric in metrics:
         for _, row in df[["m", "n"]].drop_duplicates().iterrows():
             m = row["m"]
