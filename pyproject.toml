@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ip-is-all-you-need"
 version = "0.1.0"
-description = ""
+description = "Information Pursuit Experiments"
 authors = ["Ryan Pilgrim <rzpilgrim@gmail.com>"]
 readme = "README.md"
 packages = [{include = "ip_is_all_you_need"}]
