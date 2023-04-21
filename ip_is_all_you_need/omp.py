@@ -8,7 +8,6 @@ from itertools import chain, product, repeat
 from multiprocessing import cpu_count
 from pathlib import Path
 
-import GPUtil
 import typer
 from rich.logging import RichHandler
 from tqdm import tqdm
@@ -50,6 +49,7 @@ SETTINGS = {
 
 try:
     import cupy as np
+    import GPUtil
 
     gpu = True
 except ModuleNotFoundError:
