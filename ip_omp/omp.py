@@ -58,12 +58,12 @@ except ModuleNotFoundError:
     import numpy as np
 
 
-def gen_dictionary(m, n):
+def gen_dictionary(m: int, n: int) -> np.ndarray:
     Phi = np.random.randn(m, n)
     return Phi / np.linalg.norm(Phi, axis=0)
 
 
-def projection(Phi_t, perp=False):
+def projection(Phi_t: np.ndarray, perp: bool = False) -> np.ndarray:
     logger.debug(f"Computing projection for {Phi_t.shape[1]} columns of Phi")
     U, *_ = np.linalg.svd(Phi_t, full_matrices=False)
     P = U @ U.T
@@ -74,7 +74,9 @@ def projection(Phi_t, perp=False):
     return P
 
 
-def generate_measurements_and_coeffs(Phi, p=0.01, noise_std=0.0):
+def generate_measurements_and_coeffs(
+    Phi: np.ndarray, p: float = 0.01, noise_std: float = 0.0
+) -> tuple[np.ndarray, np.ndarray]:
     m, n = Phi.shape
     supp = np.random.rand(n) <= p
     x = np.zeros(n)
@@ -82,7 +84,9 @@ def generate_measurements_and_coeffs(Phi, p=0.01, noise_std=0.0):
     return (Phi @ x + noise_std * np.random.randn(m)).reshape(-1, 1), x.reshape(-1, 1)
 
 
-def ip_objective(Phi, y, indices=None):
+def ip_objective(
+    Phi: np.ndarray, y: np.ndarray, indices: list[int] | None = None
+) -> np.ndarray:
     P = projection(Phi[:, indices], perp=True)
     Phi_projected = P @ Phi
     Phi_projected_normalized = Phi_projected / np.linalg.norm(
@@ -93,22 +97,24 @@ def ip_objective(Phi, y, indices=None):
     return objective
 
 
-def omp_objective(Phi, y, indices=None):
+def omp_objective(
+    Phi: np.ndarray, y: np.ndarray, indices: list[int] | None = None
+) -> np.ndarray:
     P = projection(Phi[:, indices], perp=True)
     Phi_projected = P @ Phi
     return np.abs(Phi_projected.T @ y)
 
 
-def omp_estimate_y(Phi, indices, y):
+def omp_estimate_y(Phi: np.ndarray, y: np.ndarray, indices: list[int]) -> np.ndarray:
     Phi_t = Phi[:, indices]
     return projection(Phi_t, perp=False) @ y
 
 
-def ip_estimate_y(Phi, indices, y):
-    return omp_estimate_y(Phi, indices, y)
+def ip_estimate_y(Phi: np.ndarray, y: np.ndarray, indices: list[int]) -> np.ndarray:
+    return omp_estimate_y(Phi, y, indices)
 
 
-def omp_estimate_x(Phi, indices, y):
+def omp_estimate_x(Phi: np.ndarray, y: np.ndarray, indices: list[int]) -> np.ndarray:
     Phi_t = Phi[:, indices]
     x_hat = np.zeros((Phi.shape[1], 1))
     logger.debug("Computing pseudo-inverse estimate of x_hat")
@@ -116,11 +122,13 @@ def omp_estimate_x(Phi, indices, y):
     return x_hat
 
 
-def ip_estimate_x(Phi, indices, y):
-    return omp_estimate_x(Phi, indices, y)
+def ip_estimate_x(Phi: np.ndarray, y: np.ndarray, indices: list[int]) -> np.ndarray:
+    return omp_estimate_x(Phi, y, indices)
 
 
-def ip(Phi, y, sparsity, tol=1e-6):
+def ip(
+    Phi: np.ndarray, y: np.ndarray, sparsity: float, tol: float = 1e-6
+) -> dict[str, float | list[float]]:
     log = defaultdict(list)
     indices = []
     k = 0
@@ -138,16 +146,16 @@ def ip(Phi, y, sparsity, tol=1e-6):
 
         indices.append(np.argmax(objective).item())
         log["indices"].append(copy(indices))
-        y_hat = ip_estimate_y(Phi, indices, y)
+        y_hat = ip_estimate_y(Phi, y, indices)
         log["y_hat"].append(y_hat)
-        x_hat = ip_estimate_x(Phi, indices, y)
+        x_hat = ip_estimate_x(Phi, y, indices)
         log["x_hat"].append(x_hat)
         k += 1
 
-    return log
+    return dict(log)
 
 
-def omp(Phi, y, sparsity, tol=1e-6):
+def omp(Phi: np.ndarray, y: np.ndarray, sparsity: float, tol: float = 1e-6) -> dict:
     log = defaultdict(list)
     indices = []
     k = 0
@@ -167,32 +175,32 @@ def omp(Phi, y, sparsity, tol=1e-6):
         log["objective"].append(objective.max().item())
         indices.append(np.argmax(objective).item())
         log["indices"].append(copy(indices))
-        y_hat = ip_estimate_y(Phi, indices, y)
+        y_hat = omp_estimate_y(Phi, y, indices)
         log["y_hat"].append(y_hat)
-        x_hat = omp_estimate_x(Phi, indices, y)
+        x_hat = omp_estimate_x(Phi, y, indices)
         log["x_hat"].append(x_hat)
         k += 1
 
-    return log
+    return dict(log)
 
 
-def recall(estimated, true):
+def recall(estimated: list[int], true: list[int]) -> float:
     return len(set(estimated).intersection(set(true))) / len(true)
 
 
-def precision(estimated, true):
+def precision(estimated: list[int], true: list[int]) -> float:
     return len(set(estimated).intersection(set(true))) / len(estimated)
 
 
-def iou(estimated, true):
+def iou(estimated: list[int], true: list[int]) -> float:
     return len(set(estimated).intersection(true)) / len(set(estimated).union(true))
 
 
-def mse(estimated, true):
+def mse(estimated: np.ndarray, true: np.ndarray) -> float:
     return np.mean((estimated - true) ** 2).item()
 
 
-def mutual_coherence(Phi):
+def mutual_coherence(Phi: np.ndarray) -> float:
     return np.max(np.abs(np.triu(Phi.T @ Phi))).item()
 
 
@@ -204,7 +212,7 @@ def run_experiment(
     noise_std: float,
     output_dir: Path,
     device: int | None = None,
-):
+) -> None:
     if gpu and device is not None:
         # get device
         context = np.cuda.Device(device)
@@ -288,6 +296,7 @@ def run_experiment(
                 "iters_omp": len(log_omp["indices"]),
                 "max_objective_ip": log_ip["objective"],
                 "max_objective_omp": log_omp["objective"],
+                "iou": iou(log_ip["indices"], log_omp["indices"]),
             }
 
             with open(experiment_results_dir / f"results_{trial}.json", "w") as f:
