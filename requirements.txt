@@ -1,4 +1,0 @@
-pytorch
-matplotlib
-seaborn
-typer
