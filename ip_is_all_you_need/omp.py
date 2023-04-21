@@ -349,7 +349,7 @@ def main(
             gpu_list = [
                 g for g in GPUtil.getAvailable(maxLoad=0.2, maxMemory=0.2, limit=jobs)
             ]
-            workers = len(gpu_list)
+            workers = min(jobs, len(gpu_list))
         else:
             gpu_list = []
             workers = min(jobs, cpu_count())
