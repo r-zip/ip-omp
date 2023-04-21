@@ -216,32 +216,35 @@ def run_experiment(
     output_dir: Path,
     gpu_number: int | None = None,
 ) -> None:
+    # handle directory creation
+    output_dir.mkdir(exist_ok=True)
+    experiment_results_dir = output_dir / str(experiment_number)
+    experiment_results_dir.mkdir(exist_ok=True)
+
+    # simulation settings to be recorded
+    settings = {
+        "experiment_number": experiment_number,
+        "m": m,
+        "n": n,
+        "measurement_rate": m / n,
+        "sparsity": s,
+        "noise_std": noise_std,
+        "output_dir": str(output_dir),
+    }
+
     if gpu and gpu_number is not None:
-        # get device
+        # set gpu according to specified number
         context = np.cuda.Device(gpu_number)
     elif gpu:
+        # set gpu according to minimum load
         context = np.cuda.Device(
             GPUtil.getFirstAvailable(order="load", maxLoad=1.0, maxMemory=1.0)[0]
         )
     else:
-        # dummy context manager
+        # dummy context manager for cpu
         context = nullcontext()
 
     with context:
-        output_dir.mkdir(exist_ok=True)
-        experiment_results_dir = output_dir / str(experiment_number)
-        experiment_results_dir.mkdir(exist_ok=True)
-
-        settings = {
-            "experiment_number": experiment_number,
-            "m": m,
-            "n": n,
-            "measurement_rate": m / n,
-            "sparsity": s,
-            "noise_std": noise_std,
-            "output_dir": str(output_dir),
-        }
-
         records = []
         intermediate_results_files = []
         for trial in range(TRIALS):
@@ -285,9 +288,10 @@ def run_experiment(
                 omp_mse_x.append(mse(x_hat, x))
                 omp_mse_y.append(mse(y_hat, y))
 
-            ious = []
-            for indices_ip, indices_omp in zip(log_ip["indices"], log_omp["indices"]):
-                ious.append(iou(indices_ip, indices_omp))
+            ious = [
+                iou(ind_ip, ind_omp)
+                for ind_ip, ind_omp in zip(log_ip["indices"], log_omp["indices"])
+            ]
 
             results = {
                 "coherence": mutual_coherence(Phi),
