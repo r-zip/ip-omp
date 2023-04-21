@@ -107,7 +107,7 @@ name = "cupy-cuda102"
 version = "12.0.0"
 description = "CuPy: NumPy & SciPy for GPU"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "cupy_cuda102-12.0.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:9bd99fbe215eec6f2b049bf3740391d95abe9b3cbebea6a195168ccc3ae76eec"},
@@ -150,7 +150,7 @@ name = "fastrlock"
 version = "0.8.1"
 description = "Fast, re-entrant optimistic lock implemented in Cython"
 category = "main"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "fastrlock-0.8.1-cp27-cp27m-macosx_10_15_x86_64.whl", hash = "sha256:e88ad64610f709daf6763fcb73b1640489d6cc3065761f0a9a42e83e0a0ce8da"},
@@ -807,4 +807,4 @@ gpu = ["gputil"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "19f60f2909e92b24a8e51272917d855635ba26976434c0c697fa7724a2369ca7"
+content-hash = "70a429fb06dc5638d4a395616af9af046a8f7ece34191b227cb7fd430ccddbc2"
