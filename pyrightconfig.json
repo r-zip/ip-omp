@@ -1,9 +1,9 @@
 {
-    "venvPath": "/Users/ryanpilgrim/miniconda3/envs",
-    "venv": "ip_omp",
+    "venvPath": "/Users/ryanpilgrim/projects/ip-is-all-you-need",
+    "venv": ".venv",
     "include": ["ip_omp", "script", "tests"],
-    "exclude": ["venv"],
-    "ignore": ["venv"],
+    "exclude": [".venv"],
+    "ignore": [".venv"],
     "verboseOutput": true,
     "reportTypeshedErrors": true,
     "reportMissingImports": true,
