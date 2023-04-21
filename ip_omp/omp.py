@@ -193,7 +193,7 @@ def mse(estimated, true):
 
 
 def mutual_coherence(Phi):
-    return np.max(np.abs(np.triu(Phi.T @ Phi)))
+    return np.max(np.abs(np.triu(Phi.T @ Phi))).item()
 
 
 def run_experiment(
