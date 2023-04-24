@@ -4,3 +4,4 @@
 poetry.lock
 /figures/
 /notes.md
+__pycache__/

@@ -166,6 +166,7 @@ def omp(Phi: np.ndarray, y: np.ndarray, sparsity: float, tol: float = 1e-6) -> d
         if k >= SPARSITY_MULTIPLE * sparsity:
             break
         logger.debug(f"Starting iteration {k} of OMP")
+
         P = projection(Phi[:, indices], perp=True)
         residual = P @ y
 

@@ -1,4 +1,4 @@
-from ip_omp.omp import (
+from ip_is_all_you_need.omp import (
     gen_dictionary,
     projection,
     generate_measurements_and_coeffs,
@@ -18,9 +18,10 @@ from ip_omp.omp import (
     run_experiment,
 )
 
-from ip_omp.summarize import load, plot
+from ip_is_all_you_need.summarize import load, plot
 
 import pytest
+import numpy as np
 
 
 def test_gen_dictionary():
@@ -28,7 +29,17 @@ def test_gen_dictionary():
 
 
 def test_projection():
-    pass
+    m, n = 5, 10
+    Phi = np.random.randn(m, n)
+    Phi_t = Phi[:, []]
+
+    P = projection(Phi_t, perp=True)
+    assert np.allclose(P, np.eye(m))
+
+    P = projection(Phi_t, perp=False)
+    assert np.allclose(P, np.zeros((m, m)))
+
+    # TODO: test normal cases
 
 
 def test_generate_measurements_and_coeffs():
