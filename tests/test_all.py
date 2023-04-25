@@ -94,8 +94,16 @@ def test_iou():
     pass
 
 
-def test_mutual_coherence():
-    pass
+@pytest.mark.parametrize(
+    "A,coherence",
+    [
+        (np.arange(4).reshape(2, 2) / np.array([2.0, np.sqrt(10)]), 0.9486833),
+        (np.eye(10), 0.0),
+        (np.ones((10, 10)) / np.sqrt(10), 1.0),
+    ],
+)
+def test_mutual_coherence(A: np.ndarray, coherence: float):
+    assert np.allclose(mutual_coherence(A), coherence)
 
 
 def test_run_experiment():

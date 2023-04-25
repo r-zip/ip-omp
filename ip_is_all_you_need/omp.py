@@ -166,7 +166,6 @@ def omp(Phi: np.ndarray, y: np.ndarray, sparsity: float, tol: float = 1e-6) -> d
         if k >= SPARSITY_MULTIPLE * sparsity:
             break
         logger.debug(f"Starting iteration {k} of OMP")
-
         P = projection(Phi[:, indices], perp=True)
         residual = P @ y
 
@@ -205,7 +204,10 @@ def mse(estimated: np.ndarray, true: np.ndarray) -> float:
 
 
 def mutual_coherence(Phi: np.ndarray) -> float:
-    return np.max(np.abs(np.triu(Phi.T @ Phi))).item()
+    if not np.allclose(np.linalg.norm(Phi, axis=0), 1.0):
+        raise ValueError("Phi does not have normalized columns.")
+
+    return np.max(np.abs(np.triu(Phi.T @ Phi, k=1))).item()
 
 
 def run_experiment(
