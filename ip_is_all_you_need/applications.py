@@ -1,11 +1,12 @@
+import clip
 import numpy as np
 import torch
-import clip
+import torch.multiprocessing
 import torchvision
 from sklearn.linear_model import LogisticRegression
-import torch.multiprocessing
+from torch.utils.data import DataLoader
 
-from .algorithms import ip_estimate_x, ip, mutual_coherence
+from .algorithms import ip, ip_estimate_x, mutual_coherence
 
 torch.set_num_threads(1)
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -22,14 +23,14 @@ def get_data(transform, dataset):
         trainset = torchvision.datasets.CIFAR10(
             root="./data", train=True, download=True, transform=transform
         )
-        trainloader = torch.utils.data.DataLoader(
+        trainloader = DataLoader(
             trainset, batch_size=batch_size, shuffle=True, num_workers=1
         )
 
         testset = torchvision.datasets.CIFAR10(
             root="./data", train=False, download=True, transform=transform
         )
-        testloader = torch.utils.data.DataLoader(
+        testloader = DataLoader(
             testset, batch_size=batch_size, shuffle=False, num_workers=1
         )
     else:
@@ -150,8 +151,5 @@ def main():
     print(clf.score(datax_test, datay_test))
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == "__main__":
     main()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
