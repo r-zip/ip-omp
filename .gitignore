@@ -5,3 +5,4 @@ poetry.lock
 /figures/
 /notes.md
 __pycache__/
+/.venv/
