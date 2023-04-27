@@ -6,7 +6,9 @@ import torch
 from ip_is_all_you_need.algorithms import (
     estimate_x,
     estimate_y,
+    ip,
     ip_objective,
+    omp,
     projection,
 )
 from ip_is_all_you_need.metrics import mutual_coherence
@@ -63,12 +65,18 @@ def test_projection(sim_data):
 def test_ip_objective(sim_data):
     Phi, _, y = sim_data
 
-    obvals = ip_objective(Phi, y, [])
+    obvals = ip_objective(Phi, y)
     assert obvals.shape == (Phi.shape[0], Phi.shape[2], 1)
     assert obvals.min() >= 0
     assert not torch.isnan(obvals).any()
 
-    obvals = ip_objective(Phi, y, [1, 2])
+    obvals = ip_objective(
+        Phi,
+        y,
+        columns=torch.arange(2 * Phi.shape[0], dtype=torch.long).reshape(
+            Phi.shape[0], 2
+        ),
+    )
     assert torch.isneginf(obvals[:, [1, 2], :]).all()
 
 
@@ -88,12 +96,26 @@ def test_estimate_y(sim_data):
     assert y_hat.shape == y_hat_empty.shape == (Phi.shape[0], Phi.shape[1], 1)
 
 
-def test_ip():
-    pass
+def test_ip(sim_data):
+    Phi, x, y = sim_data
+    log_ip = ip(Phi, y, num_iterations=10)
+    assert "indices" in log_ip.keys()
+    assert "objective" in log_ip.keys()
+    assert len(log_ip["indices"]) == len(log_ip["objective"])
+    assert all([isinstance(x, list) for x in log_ip["indices"]])
+    assert all([isinstance(xi, int) for x in log_ip["indices"] for xi in x])
+    assert all([len(x) == Phi.shape[0] for x in log_ip["indices"]])
 
 
-def test_omp():
-    pass
+def test_omp(sim_data):
+    Phi, x, y = sim_data
+    log_omp = omp(Phi, y)
+    assert "indices" in log_omp.keys()
+    assert "objective" in log_omp.keys()
+    assert len(log_omp["indices"]) == len(log_omp["objective"])
+    assert all([isinstance(x, list) for x in log_omp["indices"]])
+    assert all([isinstance(xi, int) for x in log_omp["indices"] for xi in x])
+    assert all([len(x) == Phi.shape[0] for x in log_omp["indices"]])
 
 
 def test_recall():
