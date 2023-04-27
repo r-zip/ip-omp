@@ -17,24 +17,16 @@ def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
     return P
 
 
-def omp_estimate_y(Phi: torch.Tensor, y: torch.Tensor, indices):
+def estimate_y(Phi: torch.Tensor, y: torch.Tensor, indices):
     Phi_t = Phi[:, indices]
     return projection(Phi_t, perp=False) @ y
 
 
-def ip_estimate_y(Phi: torch.Tensor, y: torch.Tensor, indices):
-    return omp_estimate_y(Phi, y, indices)
-
-
-def omp_estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
+def estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
     Phi_t = Phi[:, indices]
     x_hat = torch.zeros((Phi.shape[1])).to(DEVICE)
     x_hat[indices] = torch.linalg.pinv(Phi_t) @ y
     return x_hat
-
-
-def ip_estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
-    return omp_estimate_x(Phi, y, indices)
 
 
 def ip_objective(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
@@ -67,9 +59,9 @@ def omp(Phi: torch.Tensor, y: torch.Tensor, tol: float = 1e-6) -> dict:
         log["objective"].append(objective.max().item())
         indices.append(torch.argmax(objective).item())
         log["indices"] = copy(indices)
-        # y_hat = omp_estimate_y(Phi, y, indices)
+        # y_hat = estimate_y(Phi, y, indices)
         # log["y_hat"].append(y_hat)
-        # x_hat = omp_estimate_x(Phi, y, indices)
+        # x_hat = estimate_x(Phi, y, indices)
         # log["x_hat"].append(x_hat)
         k += 1
 
@@ -95,9 +87,9 @@ def ip(Phi: torch.Tensor, y: torch.Tensor, tol: float = 1e-6, num_iterations=Non
 
         indices.append(torch.argmax(objective).item())
         log["indices"] = copy(indices)
-        # y_hat = ip_estimate_y(Phi, y, indices)
+        # y_hat = estimate_y(Phi, y, indices)
         # log["y_hat"].append(y_hat)
-        # x_hat = ip_estimate_x(Phi, y, indices)
+        # x_hat = estimate_x(Phi, y, indices)
         # log["x_hat"].append(x_hat)
         k += 1
 

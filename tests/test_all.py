@@ -34,6 +34,8 @@ def test_sim_data(sim_data):
 def test_projection(sim_data):
     Phi, _, _ = sim_data
     eye = torch.eye(Phi.shape[1]).repeat((Phi.shape[0], 1, 1))
+
+    # just edge cases for now
     assert torch.allclose(projection(Phi[:, :, []], perp=False), torch.tensor(0.0))
     assert torch.allclose(projection(Phi[:, :, []], perp=True), eye)
     assert torch.allclose(projection(Phi, perp=False), eye)
