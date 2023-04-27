@@ -36,7 +36,6 @@ def build_dataframe(
     path: Path,
     settings: dict[str, float | int | str],
 ) -> pd.DataFrame:
-
     scalars = {k: list() for k in records[0].keys()}
 
     # NOTE: if the number of iterations for IP and OMP are the same, then the precision/recall values will be the same!

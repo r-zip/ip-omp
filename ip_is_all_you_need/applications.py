@@ -7,16 +7,16 @@ from sklearn.linear_model import LogisticRegression
 from torch.utils.data import DataLoader
 
 from .algorithms import ip, ip_estimate_x, mutual_coherence
+from .constants import DEVICE
 
 torch.set_num_threads(1)
 torch.multiprocessing.set_sharing_strategy("file_system")
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, preprocess = clip.load("ViT-B/16", device=device)
+
+model, preprocess = clip.load("ViT-B/16", device=DEVICE)
 
 
 def get_data(transform, dataset):
-
     batch_size = 1
 
     if dataset == "cifar10":
@@ -69,7 +69,6 @@ def print_energy(concepts, indices, coeff):
 
 
 def analysis_by_synthesis(dataloader, dictionary):
-
     classes = (
         "plane",
         "car",
@@ -93,7 +92,7 @@ def analysis_by_synthesis(dataloader, dictionary):
 
             # get the inputs; data is a list of [inputs, labels]
             image, labels = data
-            image = image.to(device)
+            image = image.to(DEVICE)
 
             image_features = model.encode_image(image).float()
             image_features = image_features / torch.linalg.norm(
@@ -126,7 +125,7 @@ def main():
     trainloader, testloader = get_data(preprocess, dataset)
 
     concepts = get_concepts("concept_sets/" + dataset + ".txt")
-    text = clip.tokenize(concepts).to(device)
+    text = clip.tokenize(concepts).to(DEVICE)
 
     with torch.no_grad():
         text_features = model.encode_text(text)

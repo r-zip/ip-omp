@@ -7,10 +7,8 @@ tqdm==4.65.0
 pandas==2.0.0
 joblib==1.2.0
 gputil==1.4.0
-pytest==7.3.1
 ftfy==6.1.1
 regex==2023.3.23
 clip @ git+https://github.com/openai/CLIP.git@a9b1bf5
 scikit-learn==1.2.0
-Pillow
-
+Pillow==9.5.0
