@@ -9,10 +9,10 @@ from .constants import DEVICE
 
 def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
     U, *_ = torch.linalg.svd(Phi_t, full_matrices=False)
-    P = U @ U.transpose(0, 2, 1)
+    P = U @ U.transpose(1, 2)
 
     if perp:
-        return torch.eye(P.shape[0]).to(DEVICE)[None, :, :] - P
+        return torch.eye(P.shape[1]).to(DEVICE)[None, :, :] - P
 
     return P
 

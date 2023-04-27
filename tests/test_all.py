@@ -3,6 +3,7 @@ from math import sqrt
 import pytest
 import torch
 
+from ip_is_all_you_need.algorithms import projection
 from ip_is_all_you_need.metrics import mutual_coherence
 from ip_is_all_you_need.simulations import (
     gen_dictionary,
@@ -12,6 +13,7 @@ from ip_is_all_you_need.simulations import (
 
 @pytest.fixture
 def sim_data() -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    torch.set_default_dtype(torch.double)
     m = 100
     n = 200
     p = 0.05
@@ -29,8 +31,13 @@ def test_sim_data(sim_data):
     assert torch.allclose(Phi @ x, y)
 
 
-def test_projection():
-    pass
+def test_projection(sim_data):
+    Phi, _, _ = sim_data
+    eye = torch.eye(Phi.shape[1]).repeat((Phi.shape[0], 1, 1))
+    assert torch.allclose(projection(Phi[:, :, []], perp=False), torch.tensor(0.0))
+    assert torch.allclose(projection(Phi[:, :, []], perp=True), eye)
+    assert torch.allclose(projection(Phi, perp=False), eye)
+    assert torch.allclose(projection(Phi, perp=True), torch.tensor(0.0))
 
 
 def test_ip_objective():
