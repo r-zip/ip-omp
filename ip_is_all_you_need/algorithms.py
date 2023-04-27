@@ -1,5 +1,4 @@
 from collections import defaultdict
-from copy import copy
 
 import numpy as np
 import torch
@@ -56,7 +55,7 @@ def ip_objective(
     )
 
     objective = torch.abs(Phi_projected_normalized.transpose(1, 2) @ y)
-    objective[:, columns.ravel()] = -np.inf
+    objective[batches, columns] = -np.inf
     return objective
 
 
@@ -83,14 +82,14 @@ def omp(
         # TODO: rethink termination criterion
         squared_error = residual.transpose(1, 2) @ residual
         if num_iterations is None and (
-            (squared_error < tol).all() or k == Phi.shape[1] - 1
+            (squared_error < tol).all() or k == Phi.shape[2] - 1
         ):
             break
         elif k == num_iterations:
             break
 
-        objective = torch.absolute(Phi.transpose(1, 2) @ residual)
-        log["objective"].append(objective.max().item())
+        objective = torch.abs(Phi.transpose(1, 2) @ residual)
+        log["objective"].append(objective.max(dim=1).values.ravel().tolist())
         curr_indices = objective.argmax(dim=1)
         columns = torch.cat((columns, curr_indices), dim=1)
 
@@ -116,17 +115,17 @@ def ip(
     k = 0
     while k < Phi.shape[2]:
         objective = ip_objective(Phi, y, batches=batches, columns=columns)
-        max_objective = objective.max()
+        max_objective = objective.max(dim=1).values
 
         # TODO: rethink termination criterion
         if num_iterations is None and (
-            torch.absolute(max_objective) < tol or k == Phi.shape[1] - 1
+            (max_objective < tol).all() or k == Phi.shape[2] - 1
         ):
             break
         elif k == num_iterations:
             break
 
-        log["objective"].append(max_objective.item())
+        log["objective"].append(max_objective.ravel().tolist())
 
         curr_indices = objective.argmax(dim=1)
         columns = torch.cat((columns, curr_indices), dim=1)
