@@ -18,27 +18,30 @@ def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
 
 
 def estimate_y(Phi: torch.Tensor, y: torch.Tensor, indices):
-    Phi_t = Phi[:, indices]
+    Phi_t = Phi[:, :, indices]
     return projection(Phi_t, perp=False) @ y
 
 
-def estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
-    Phi_t = Phi[:, indices]
-    x_hat = torch.zeros((Phi.shape[1])).to(DEVICE)
-    x_hat[indices] = torch.linalg.pinv(Phi_t) @ y
+def estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices: list[int]) -> torch.Tensor:
+    if not indices:
+        return torch.zeros(Phi.shape[0], Phi.shape[2], 1).to(DEVICE)
+
+    Phi_t = Phi[:, :, indices]
+    x_hat = torch.zeros((Phi.shape[0], Phi.shape[2], 1)).to(DEVICE)
+    x_hat[:, indices] = torch.linalg.pinv(Phi_t) @ y
     return x_hat
 
 
 def ip_objective(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
-    P = projection(Phi[:, indices], perp=True)
+    P = projection(Phi[:, :, indices], perp=True)
 
     Phi_projected = P @ Phi
-    Phi_projected_normalized = Phi_projected / torch.linalg.norm(
-        Phi_projected, dim=0
-    ).reshape(1, -1)
+    Phi_projected_normalized = (
+        Phi_projected / torch.linalg.norm(Phi_projected, dim=1)[:, None, :]
+    )
 
-    objective = torch.absolute(Phi_projected_normalized.T @ y)
-    objective[indices] = -np.inf
+    objective = torch.abs(Phi_projected_normalized.transpose(1, 2) @ y)
+    objective[:, indices] = -np.inf
     return objective
 
 

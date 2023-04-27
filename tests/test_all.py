@@ -3,7 +3,12 @@ from math import sqrt
 import pytest
 import torch
 
-from ip_is_all_you_need.algorithms import projection
+from ip_is_all_you_need.algorithms import (
+    estimate_x,
+    estimate_y,
+    ip_objective,
+    projection,
+)
 from ip_is_all_you_need.metrics import mutual_coherence
 from ip_is_all_you_need.simulations import (
     gen_dictionary,
@@ -36,34 +41,51 @@ def test_projection(sim_data):
     eye = torch.eye(Phi.shape[1]).repeat((Phi.shape[0], 1, 1))
 
     # just edge cases for now
-    assert torch.allclose(projection(Phi[:, :, []], perp=False), torch.tensor(0.0))
-    assert torch.allclose(projection(Phi[:, :, []], perp=True), eye)
-    assert torch.allclose(projection(Phi, perp=False), eye)
-    assert torch.allclose(projection(Phi, perp=True), torch.tensor(0.0))
+    projection_shape = (Phi.shape[0], Phi.shape[1], Phi.shape[1])
+
+    P = projection(Phi[:, :, []], perp=False)
+    assert P.shape == projection_shape
+    assert torch.allclose(P, torch.tensor(0.0))
+
+    P = projection(Phi[:, :, []], perp=True)
+    assert P.shape == projection_shape
+    assert torch.allclose(P, eye)
+
+    P = projection(Phi, perp=False)
+    assert P.shape == projection_shape
+    assert torch.allclose(P, eye)
+
+    P = projection(Phi, perp=True)
+    assert P.shape == projection_shape
+    assert torch.allclose(P, torch.tensor(0.0))
 
 
-def test_ip_objective():
-    pass
+def test_ip_objective(sim_data):
+    Phi, _, y = sim_data
+
+    obvals = ip_objective(Phi, y, [])
+    assert obvals.shape == (Phi.shape[0], Phi.shape[2], 1)
+    assert obvals.min() >= 0
+    assert not torch.isnan(obvals).any()
+
+    obvals = ip_objective(Phi, y, [1, 2])
+    assert torch.isneginf(obvals[:, [1, 2], :]).all()
 
 
-def test_omp_objective():
-    pass
+def test_estimate_x(sim_data):
+    Phi, x, y = sim_data
+    x_hat_empty = estimate_x(Phi, y, [])
+    assert torch.allclose(x_hat_empty, torch.tensor(0.0))
+    x_hat = estimate_x(Phi, y, [1, 2])
+    assert x_hat.shape == x_hat_empty.shape == (Phi.shape[0], Phi.shape[2], 1)
 
 
-def test_ip_estimate_x():
-    pass
-
-
-def test_omp_estimate_x():
-    pass
-
-
-def test_ip_estimate_y():
-    pass
-
-
-def test_omp_estimate_y():
-    pass
+def test_estimate_y(sim_data):
+    Phi, x, y = sim_data
+    y_hat_empty = estimate_y(Phi, y, [])
+    assert torch.allclose(y_hat_empty, torch.tensor(0.0))
+    y_hat = estimate_y(Phi, y, [1, 2])
+    assert y_hat.shape == y_hat_empty.shape == (Phi.shape[0], Phi.shape[1], 1)
 
 
 def test_ip():
