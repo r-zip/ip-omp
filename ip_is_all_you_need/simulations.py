@@ -63,6 +63,11 @@ SETTINGS = {
 NUM_SETTINGS = len(list(product(*list(SETTINGS.values()))))
 
 
+class Device(str, Enum):
+    cuda = "cuda"
+    cpu = "cpu"
+
+
 def get_gpus():
     return GPUtil.getAvailable(
         maxLoad=0.1, maxMemory=0.15, limit=float("inf"), order="memory"
@@ -155,8 +160,16 @@ def run_experiment(
     s: float,
     noise_std: float,
     output_dir: Path,
-    device: str | torch.device = DEVICE,
+    device_type: Device,
 ) -> None:
+    if device_type == Device.cuda:
+        while not (gpus := get_gpus()):
+            sleep(0.01)
+
+        device = f"cuda:{gpus[0]}"
+    else:
+        device = "cpu"
+
     # handle directory creation
     output_dir.mkdir(exist_ok=True)
     experiment_results_dir = output_dir / str(experiment_number)
@@ -257,11 +270,6 @@ def aggregate_results(results_dir: Path) -> None:
     df.write_parquet(results_dir / "results.parquet")
 
 
-class Device(str, Enum):
-    cuda = "cuda"
-    cpu = "cpu"
-
-
 def main(
     results_dir: Path,
     overwrite: bool = False,
@@ -288,7 +296,6 @@ def main(
         pool = ProcessPoolExecutor(max_workers=workers)
 
         futures = []
-        finished = 0
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
@@ -301,48 +308,14 @@ def main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
-                    device=get_gpus()[0] if device == "cuda" else "cpu",
+                    device=device,
                 )
             )
 
-            for future in futures:
-                if future.done():
-                    finished += 1
-                    logger.info(f"Finished {finished} / {NUM_SETTINGS} jobs")
-                    futures.remove(future)
-                elif e := future.exception():
-                    logger.exception(f"Exception raised by subprocess: {e}")
-                    traceback.print_exception(e)
-
-            if device == "cuda":
-                sleep(0.1)
-
-            while (device == "cuda") and not get_gpus():
-                sleep(0.1)
-
-    else:
-        futures = []
-        for k, ((m, n), s, noise_std) in enumerate(
-            tqdm(
-                product(
-                    SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"]
-                ),
-                total=len(SETTINGS["dimensions"])
-                * len(SETTINGS["sparsity"])
-                * len(SETTINGS["noise_std"]),
-            )
-        ):
-            run_experiment(
-                k,
-                m,
-                n,
-                s,
-                output_dir=results_dir,
-                noise_std=noise_std,
-            )
-
-    for f in as_completed(futures):
-        pass
+    for f in tqdm(as_completed(futures), total=len(futures)):
+        if e := f.exception():
+            logger.exception(e)
+            traceback.print_exc(e)
 
     aggregate_results(results_dir)
 
