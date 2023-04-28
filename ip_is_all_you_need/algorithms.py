@@ -109,8 +109,8 @@ def ip(
     num_iterations: int | None = None,
 ) -> dict:
     log = defaultdict(list)
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1))
-    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long)
+    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1)).to(DEVICE)
+    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(DEVICE)
     k = 0
     while k < Phi.shape[2]:
         objective = ip_objective(Phi, y, batches=batches, columns=columns)
