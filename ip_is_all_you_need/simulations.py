@@ -284,9 +284,9 @@ def main(
 
     if jobs > 1:
         if device == Device.cuda:
-            workers = min(jobs, len(get_gpus()))
+            workers = min(jobs, len(get_gpus()), NUM_SETTINGS)
         else:
-            workers = min(jobs, cpu_count())
+            workers = min(jobs, cpu_count(), NUM_SETTINGS)
 
         if workers < jobs:
             logger.info(
