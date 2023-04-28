@@ -103,9 +103,9 @@ def omp(
         columns = torch.cat((columns, curr_indices), dim=1)
 
         log["indices"].append(curr_indices.ravel().tolist())
-        y_hat = estimate_y(Phi, y, columns)
+        y_hat = estimate_y(Phi, y, columns, device=device)
         log["y_hat"].append(y_hat)
-        x_hat = estimate_x(Phi, y, columns)
+        x_hat = estimate_x(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
         k += 1
 
@@ -124,7 +124,9 @@ def ip(
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(device)
     k = 0
     while k < Phi.shape[2]:
-        objective = ip_objective(Phi, y, batches=batches, columns=columns)
+        objective = ip_objective(
+            Phi, y, batches=batches, columns=columns, device=device
+        )
         max_objective = objective.max(dim=1).values
 
         # TODO: rethink termination criterion
@@ -142,9 +144,9 @@ def ip(
 
         # TODO: fix summarize code to take this as input (no longer list of lists)
         log["indices"].append(curr_indices.ravel().tolist())
-        y_hat = estimate_y(Phi, y, columns)
+        y_hat = estimate_y(Phi, y, columns, device=device)
         log["y_hat"].append(y_hat)
-        x_hat = estimate_x(Phi, y, columns)
+        x_hat = estimate_x(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
         k += 1
 
