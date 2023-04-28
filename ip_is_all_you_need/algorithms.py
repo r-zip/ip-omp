@@ -8,9 +8,9 @@ from .constants import DEVICE
 
 def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
     if Phi_t.numel() == 0 and perp:
-        return torch.eye(Phi_t.shape[1]).repeat(Phi_t.shape[0], 1, 1)
+        return torch.eye(Phi_t.shape[1]).repeat(Phi_t.shape[0], 1, 1).to(DEVICE)
     elif Phi_t.numel() == 0 and not perp:
-        return torch.zeros((Phi_t.shape[0], Phi_t.shape[1], Phi_t.shape[1]))
+        return torch.zeros((Phi_t.shape[0], Phi_t.shape[1], Phi_t.shape[1])).to(DEVICE)
 
     U, *_ = torch.linalg.svd(Phi_t, full_matrices=False)
     P = U @ U.transpose(1, 2)
