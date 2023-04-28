@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from itertools import product
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -274,6 +274,8 @@ def main(
                     finished += 1
                     logger.info(f"Finished {finished} / {NUM_SETTINGS} jobs")
                     futures.remove(future)
+                elif e := future.exception():
+                    logger.info(f"Future failed with exception: {e}")
 
     else:
         for k, ((m, n), s, noise_std) in enumerate(
@@ -294,6 +296,9 @@ def main(
                 output_dir=results_dir,
                 noise_std=noise_std,
             )
+
+    for f in as_completed(futures):
+        pass
 
     aggregate_results(results_dir)
 
