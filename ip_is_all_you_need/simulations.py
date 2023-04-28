@@ -281,10 +281,7 @@ def main(
                     futures.remove(future)
                 elif e := future.exception():
                     logger.exception(f"Exception raised by subprocess: {e}")
-                    try:
-                        pass
-                    except:
-                        raise
+                    raise e
 
             if device == "cuda":
                 sleep(0.1)
