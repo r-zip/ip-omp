@@ -243,7 +243,7 @@ def main(
         )
 
     if jobs > 1:
-        if DEVICE == "cuda":
+        if device == Device.cuda:
             workers = min(jobs, len(get_gpus()))
         else:
             workers = min(jobs, cpu_count())
@@ -260,12 +260,6 @@ def main(
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
-            if device == "cuda":
-                sleep(0.1)
-
-            while (device == "cuda") and not get_gpus():
-                sleep(0.1)
-
             futures.append(
                 pool.submit(
                     run_experiment,
@@ -287,7 +281,14 @@ def main(
                 elif e := future.exception():
                     logger.info(f"Future failed with exception: {e}")
 
+            if device == "cuda":
+                sleep(0.1)
+
+            while (device == "cuda") and not get_gpus():
+                sleep(0.1)
+
     else:
+        futures = []
         for k, ((m, n), s, noise_std) in enumerate(
             tqdm(
                 product(
