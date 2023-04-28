@@ -61,7 +61,7 @@ def ip_objective(
             device
         ).reshape(-1, 1)
 
-    P = projection(Phi[batches, :, columns].transpose(1, 2), perp=True)
+    P = projection(Phi[batches, :, columns].transpose(1, 2), perp=True, device=device)
 
     Phi_projected = P @ Phi
     Phi_projected_normalized = (
@@ -85,7 +85,9 @@ def omp(
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(device)
     k = 0
     while k < Phi.shape[2]:
-        P = projection(Phi[batches, :, columns].transpose(1, 2), perp=True)
+        P = projection(
+            Phi[batches, :, columns].transpose(1, 2), perp=True, device=device
+        )
         residual = P @ y
 
         # TODO: rethink termination criterion
