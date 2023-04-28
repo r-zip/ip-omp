@@ -252,6 +252,7 @@ def aggregate_results(results_dir: Path) -> None:
                     "noise_std",
                     "output_dir",
                     "trial",
+                    "nnz",
                     "norm_x",
                     "norm_y",
                     "coherence",
