@@ -1,4 +1,5 @@
 import logging
+import traceback
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
@@ -279,7 +280,7 @@ def main(
                     logger.info(f"Finished {finished} / {NUM_SETTINGS} jobs")
                     futures.remove(future)
                 elif e := future.exception():
-                    logger.exception(e)
+                    logger.exception(e.__traceback__)
                     logger.info(f"Future failed with exception: {e}")
 
             if device == "cuda":
