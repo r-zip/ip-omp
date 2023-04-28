@@ -71,8 +71,8 @@ def omp(
     num_iterations: int | None = None,
 ) -> dict:
     log = defaultdict(list)
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1))
-    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long)
+    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1)).to(DEVICE)
+    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(DEVICE)
     k = 0
     while k < Phi.shape[2]:
         P = projection(Phi[batches, :, columns].transpose(1, 2), perp=True)
@@ -90,7 +90,7 @@ def omp(
         objective = torch.abs(Phi.transpose(1, 2) @ residual)
         log["objective"].append(objective.max(dim=1).values.ravel().tolist())
         curr_indices = objective.argmax(dim=1)
-        columns = torch.cat((columns, curr_indices), dim=1).to(DEVICE)
+        columns = torch.cat((columns, curr_indices), dim=1)
 
         log["indices"].append(curr_indices.ravel().tolist())
         y_hat = estimate_y(Phi, y, columns)
