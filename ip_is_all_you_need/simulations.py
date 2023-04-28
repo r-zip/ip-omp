@@ -1,4 +1,3 @@
-import json
 import logging
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -7,6 +6,7 @@ from multiprocessing import cpu_count
 from pathlib import Path
 
 import GPUtil
+import polars as pl
 import torch
 import typer
 from rich.logging import RichHandler
@@ -25,16 +25,16 @@ logger = logging.getLogger()
 SETTINGS = {
     "dimensions": [
         # (500, 500),
-        # (500, 750),
+        (500, 750),
         # (500, 1000),
         # (500, 1250),
-        (500, 1500),
+        # (500, 1500),
     ],
     "sparsity": [
         # 0.01,
         # 0.05,
-        # 0.1,
-        0.2,
+        0.1,
+        # 0.2,
         # 0.3,
         # 0.4,
     ],
@@ -71,7 +71,56 @@ def get_true_support(x: torch.Tensor) -> list[set[int]]:
     for k, v in nonzeros:
         support_sets[k].add(v)
 
-    return [support_sets[k] for k in sorted(support_sets.keys())]
+    return [sorted(support_sets[k]) for k in sorted(support_sets.keys())]
+
+
+def transpose_log(log: dict[str, list]) -> dict[str, list]:
+    transposed = {}
+    for key, value in log.items():
+        transposed[key] = [list(v) for v in zip(*value)]
+
+    return transposed
+
+
+def compute_metrics(
+    log: dict[str, list[int]],
+    true_support: list[list[int]],
+    xs: torch.Tensor,
+    ys: torch.Tensor,
+    Phis: torch.Tensor,
+    algorithm: str,
+) -> list[dict[str, list[float]]]:
+    metrics = []
+    for trial, (indices, x_hat, y_hat, Phi, support, x, y) in enumerate(
+        zip(log["indices"], log["x_hat"], log["y_hat"], Phis, true_support, xs, ys)
+    ):
+        coherence = mutual_coherence(Phi)
+        nnz = len(support)
+        norm_x = torch.linalg.norm(x).item()
+        norm_y = torch.linalg.norm(y).item()
+        for iter, (x_hat_t, y_hat_t) in enumerate(zip(x_hat, y_hat)):
+            metrics_now = {
+                "trial": trial,
+                "iter": iter,
+                "algorithm": algorithm,
+                "recall": recall(indices[: iter + 1], support),
+                "precision": precision(indices[: iter + 1], support),
+                "mse_x": mse(x_hat_t, x),
+                "mse_y": mse(y_hat_t, y),
+                "estimated_support": indices[: iter + 1],
+                "true_support": support,
+                "x_hat": x_hat_t.ravel().tolist(),
+                "y_hat": y_hat_t.ravel().tolist(),
+                "norm_x": norm_x,
+                "norm_y": norm_y,
+                "nnz": nnz,
+                "coherence": coherence,
+                "x": x.ravel().tolist(),
+                "y": y.ravel().tolist(),
+            }
+            metrics.append(metrics_now)
+
+    return metrics
 
 
 def run_experiment(
@@ -87,21 +136,7 @@ def run_experiment(
     experiment_results_dir = output_dir / str(experiment_number)
     experiment_results_dir.mkdir(exist_ok=True)
 
-    # simulation settings to be recorded
-    settings = {
-        "experiment_number": experiment_number,
-        "m": m,
-        "n": n,
-        "measurement_rate": m / n,
-        "sparsity": s,
-        "noise_std": noise_std,
-        "output_dir": str(output_dir),
-    }
-
     with torch.no_grad():
-        records = []
-        intermediate_results_files = []
-
         logger.info(
             f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
         )
@@ -115,72 +150,49 @@ def run_experiment(
         logger.info("Running OMP")
         log_omp = omp(Phi, y, num_iterations=nnz.max().item())
 
-        breakpoint()
-        ip_precision = []
-        ip_recall = []
-        ip_mse_x = []
-        ip_mse_y = []
+        # tranpose logs
+        log_ip = transpose_log(log_ip)
+        log_omp = transpose_log(log_omp)
+
         logger.info("Generating metrics for IP")
-        for indices, x_hat, y_hat in zip(
-            log_ip["indices"], log_ip["x_hat"], log_ip["y_hat"]
-        ):
-            ip_recall.append(recall(indices, true_support))
-            ip_precision.append(precision(indices, true_support))
-            ip_mse_x.append(mse(x_hat, x))
-            ip_mse_y.append(mse(y_hat, y))
+        metrics_ip = compute_metrics(log_ip, true_support, x, y, Phi, "ip")
 
-        omp_precision = []
-        omp_recall = []
-        omp_mse_x = []
-        omp_mse_y = []
         logger.info("Generating metrics for OMP")
-        for indices, x_hat, y_hat in zip(
-            log_omp["indices"], log_omp["x_hat"], log_omp["y_hat"]
-        ):
-            omp_recall.append(recall(indices, true_support))
-            omp_precision.append(precision(indices, true_support))
-            omp_mse_x.append(mse(x_hat, x))
-            omp_mse_y.append(mse(y_hat, y))
+        metrics_omp = compute_metrics(log_omp, true_support, x, y, Phi, "omp")
 
-        ious = [
-            iou(ind_ip, ind_omp)
-            for ind_ip, ind_omp in zip(log_ip["indices"], log_omp["indices"])
-        ]
+        df = pl.concat(
+            [pl.DataFrame(metrics_ip), pl.DataFrame(metrics_omp)], how="vertical"
+        )
 
-        results = {
-            "coherence": mutual_coherence(Phi),
-            "precision_ip": ip_precision,
-            "precision_omp": omp_precision,
-            "recall_ip": ip_recall,
-            "recall_omp": omp_recall,
-            "mse_x_ip": ip_mse_x,
-            "mse_x_omp": omp_mse_x,
-            "mse_y_ip": ip_mse_y,
-            "mse_y_omp": omp_mse_y,
-            "iters_ip": len(log_ip["indices"]),
-            "iters_omp": len(log_omp["indices"]),
-            "max_objective_ip": log_ip["objective"],
-            "max_objective_omp": log_omp["objective"],
-            "iou": ious,
-            "nnz": nnz,
-            "norm_x": torch.linalg.norm(x).item(),
-            "norm_y": torch.linalg.norm(y).item(),
-        }
+        # compute iou
+        pivot_table = df.pivot(
+            index=["trial", "iter"],
+            columns="algorithm",
+            values="estimated_support",
+            aggregate_function="first",
+        ).with_columns(
+            pl.struct(["ip", "omp"])
+            .apply(lambda x: iou(x["ip"], x["omp"]))
+            .alias("iou")
+        )
 
-        intermediate_results_file = experiment_results_dir / f"results_{trial}.json"
-        with open(intermediate_results_file, "w") as f:
-            json.dump(results, f)
+        df = (
+            df.join(pivot_table, on=["trial", "iter"])
+            .drop(["ip", "omp"])
+            .with_columns(
+                [
+                    pl.lit(experiment_number).alias("experiment_number"),
+                    pl.lit(m).alias("m"),
+                    pl.lit(n).alias("n"),
+                    pl.lit(m / n).alias("measurement_rate"),
+                    pl.lit(s).alias("mean_sparsity"),
+                    pl.lit(noise_std).alias("noise_std"),
+                    pl.lit(str(output_dir)).alias("output_dir"),
+                ]
+            )
+        )
 
-        records.append(results)
-
-        logger.info(f"Saving metrics to {experiment_results_dir / 'results.json'}")
-        with open(experiment_results_dir / "results.json", "w") as f:
-            json.dump({**settings, "results": records}, f)
-
-        # clean up intermediate results files
-        for path in intermediate_results_files:
-            if path.stem.endswith(tuple("0123456789")):
-                path.unlink()
+        df.write_parquet(output_dir / "results.parquet")
 
 
 def main(

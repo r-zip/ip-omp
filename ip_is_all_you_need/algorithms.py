@@ -22,17 +22,22 @@ def projection(Phi_t: torch.Tensor, perp: bool = False) -> torch.Tensor:
 
 
 def estimate_y(Phi: torch.Tensor, y: torch.Tensor, indices):
-    Phi_t = Phi[:, :, indices]
-    return projection(Phi_t, perp=False) @ y
+    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1))
+    Phi_t = Phi[batches, :, indices].transpose(1, 2)
+    P = projection(Phi_t, perp=True)
+    return P @ y
 
 
-def estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices: list[int]) -> torch.Tensor:
-    if not indices:
+def estimate_x(Phi: torch.Tensor, y: torch.Tensor, indices) -> torch.Tensor:
+    if indices is None:
         return torch.zeros(Phi.shape[0], Phi.shape[2], 1).to(DEVICE)
 
-    Phi_t = Phi[:, :, indices]
+    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1))
+
+    Phi_t = Phi[batches, :, indices].transpose(1, 2)
     x_hat = torch.zeros((Phi.shape[0], Phi.shape[2], 1)).to(DEVICE)
-    x_hat[:, indices] = torch.linalg.pinv(Phi_t) @ y
+
+    x_hat[batches, indices] = torch.linalg.pinv(Phi_t) @ y
     return x_hat
 
 
@@ -57,12 +62,6 @@ def ip_objective(
     objective = torch.abs(Phi_projected_normalized.transpose(1, 2) @ y)
     objective[batches, columns] = -np.inf
     return objective
-
-
-def update_index_array(
-    index_array: torch.Tensor, new_indices: torch.Tensor
-) -> torch.Tensor:
-    pass
 
 
 def omp(
@@ -94,10 +93,10 @@ def omp(
         columns = torch.cat((columns, curr_indices), dim=1)
 
         log["indices"].append(curr_indices.ravel().tolist())
-        # y_hat = estimate_y(Phi, y, indices)
-        # log["y_hat"].append(y_hat)
-        # x_hat = estimate_x(Phi, y, indices)
-        # log["x_hat"].append(x_hat)
+        y_hat = estimate_y(Phi, y, columns)
+        log["y_hat"].append(y_hat)
+        x_hat = estimate_x(Phi, y, columns)
+        log["x_hat"].append(x_hat)
         k += 1
 
     return dict(log)
@@ -132,10 +131,10 @@ def ip(
 
         # TODO: fix summarize code to take this as input (no longer list of lists)
         log["indices"].append(curr_indices.ravel().tolist())
-        # y_hat = estimate_y(Phi, y, indices)
-        # log["y_hat"].append(y_hat)
-        # x_hat = estimate_x(Phi, y, indices)
-        # log["x_hat"].append(x_hat)
+        y_hat = estimate_y(Phi, y, columns)
+        log["y_hat"].append(y_hat)
+        x_hat = estimate_x(Phi, y, columns)
+        log["x_hat"].append(x_hat)
         k += 1
 
     return dict(log)
