@@ -1,9 +1,10 @@
 import logging
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 from multiprocessing import cpu_count
 from pathlib import Path
+from time import sleep
 
 import GPUtil
 import polars as pl
@@ -48,6 +49,10 @@ SETTINGS = {
 # fmt: on
 
 NUM_SETTINGS = len(list(product(*list(SETTINGS.values()))))
+
+
+def get_gpus():
+    return GPUtil.getAvailable(maxLoad=0.1, maxMemory=0.15, limit=float("inf"))
 
 
 def gen_dictionary(batch_size: int, m: int, n: int) -> torch.Tensor:
@@ -222,12 +227,8 @@ def main(
 
     if jobs > 1:
         if DEVICE == "cuda":
-            gpu_list = [
-                g for g in GPUtil.getAvailable(maxLoad=0.2, maxMemory=0.2, limit=jobs)
-            ]
-            workers = min(jobs, len(gpu_list))
+            workers = min(jobs, get_gpus())
         else:
-            gpu_list = []
             workers = min(jobs, cpu_count())
 
         if workers < jobs:
@@ -237,25 +238,22 @@ def main(
 
         pool = ProcessPoolExecutor(max_workers=workers)
 
-        futures = []
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
-            futures.append(
-                pool.submit(
-                    run_experiment,
-                    k,
-                    m,
-                    n,
-                    s,
-                    output_dir=results_dir,
-                    noise_std=noise_std,
-                )
+            while not get_gpus():
+                sleep(0.1)
+
+            pool.submit(
+                run_experiment,
+                k,
+                m,
+                n,
+                s,
+                output_dir=results_dir,
+                noise_std=noise_std,
             )
-        # progress bar
-        for f in tqdm(as_completed(futures), total=len(futures)):
-            if e := f.exception():
-                logger.info(f"Future failed with exception: {e}")
+
     else:
         for k, ((m, n), s, noise_std) in enumerate(
             tqdm(
