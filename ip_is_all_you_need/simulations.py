@@ -241,7 +241,7 @@ def main(
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
-            while not get_gpus():
+            while (DEVICE == "cuda") and not get_gpus():
                 sleep(0.1)
 
             pool.submit(
