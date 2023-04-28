@@ -55,19 +55,24 @@ def get_gpus():
     return GPUtil.getAvailable(maxLoad=0.1, maxMemory=0.15, limit=float("inf"))
 
 
-def gen_dictionary(batch_size: int, m: int, n: int) -> torch.Tensor:
-    Phi = torch.randn(batch_size, m, n).to(DEVICE)
+def gen_dictionary(
+    batch_size: int, m: int, n: int, device: str | torch.device = DEVICE
+) -> torch.Tensor:
+    Phi = torch.randn(batch_size, m, n).to(device)
     return Phi / torch.linalg.norm(Phi, dim=1)[:, None, :]
 
 
 def generate_measurements_and_coeffs(
-    Phi: torch.Tensor, p: float = 0.01, noise_std: float = 0.0
+    Phi: torch.Tensor,
+    p: float = 0.01,
+    noise_std: float = 0.0,
+    device: str | torch.device = DEVICE,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, m, n = Phi.shape
-    supp = torch.rand(batch_size, n, 1).to(DEVICE) <= p
-    x = torch.zeros(batch_size, n, 1).to(DEVICE)
-    x[supp] = torch.randn(int(supp.sum().item())).to(DEVICE)
-    return (Phi @ x + noise_std * torch.randn(batch_size, m, 1).to(DEVICE)), x
+    supp = torch.rand(batch_size, n, 1).to(device) <= p
+    x = torch.zeros(batch_size, n, 1).to(device)
+    x[supp] = torch.randn(int(supp.sum().item())).to(device)
+    return (Phi @ x + noise_std * torch.randn(batch_size, m, 1).to(device)), x
 
 
 def get_true_support(x: torch.Tensor) -> list[set[int]]:
@@ -136,6 +141,7 @@ def run_experiment(
     s: float,
     noise_std: float,
     output_dir: Path,
+    device: str | torch.device = DEVICE,
 ) -> None:
     # handle directory creation
     output_dir.mkdir(exist_ok=True)
@@ -146,15 +152,17 @@ def run_experiment(
         logger.info(
             f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
         )
-        Phi = gen_dictionary(TRIALS, m, n)
-        y, x = generate_measurements_and_coeffs(Phi, p=s, noise_std=noise_std)
+        Phi = gen_dictionary(TRIALS, m, n, device=device)
+        y, x = generate_measurements_and_coeffs(
+            Phi, p=s, noise_std=noise_std, device=device
+        )
         nnz = torch.count_nonzero(x, axis=1)
 
         true_support = get_true_support(x)
         logger.info("Running IP")
-        log_ip = ip(Phi, y, num_iterations=nnz.max().item())
+        log_ip = ip(Phi, y, num_iterations=nnz.max().item(), device=device)
         logger.info("Running OMP")
-        log_omp = omp(Phi, y, num_iterations=nnz.max().item())
+        log_omp = omp(Phi, y, num_iterations=nnz.max().item(), device=device)
 
         # tranpose logs
         log_ip = transpose_log(log_ip)
@@ -255,6 +263,7 @@ def main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
+                    device=get_gpus()[0],
                 )
             )
 
