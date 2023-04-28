@@ -62,7 +62,7 @@ def get_gpus():
 def gen_dictionary(
     batch_size: int, m: int, n: int, device: str | torch.device = DEVICE
 ) -> torch.Tensor:
-    Phi = torch.randn(batch_size, m, n).to(device)
+    Phi = torch.randn(batch_size, m, n, device=device)
     return Phi / torch.linalg.norm(Phi, dim=1)[:, None, :]
 
 
@@ -73,10 +73,10 @@ def generate_measurements_and_coeffs(
     device: str | torch.device = DEVICE,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, m, n = Phi.shape
-    supp = torch.rand(batch_size, n, 1).to(device) <= p
-    x = torch.zeros(batch_size, n, 1).to(device)
-    x[supp] = torch.randn(int(supp.sum().item())).to(device)
-    return (Phi @ x + noise_std * torch.randn(batch_size, m, 1).to(device)), x
+    supp = torch.rand(batch_size, n, 1, device=device) <= p
+    x = torch.zeros(batch_size, n, 1, device=device)
+    x[supp] = torch.randn(int(supp.sum().item()), device=device)
+    return (Phi @ x + noise_std * torch.randn(batch_size, m, 1, device=device)), x
 
 
 def get_true_support(x: torch.Tensor) -> list[set[int]]:

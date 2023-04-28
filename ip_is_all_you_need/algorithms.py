@@ -10,15 +10,17 @@ def projection(
     Phi_t: torch.Tensor, perp: bool = False, device: str | torch.device = DEVICE
 ) -> torch.Tensor:
     if Phi_t.numel() == 0 and perp:
-        return torch.eye(Phi_t.shape[1]).repeat(Phi_t.shape[0], 1, 1).to(device)
+        return torch.eye(Phi_t.shape[1], device=device).repeat(Phi_t.shape[0], 1, 1)
     elif Phi_t.numel() == 0 and not perp:
-        return torch.zeros((Phi_t.shape[0], Phi_t.shape[1], Phi_t.shape[1])).to(device)
+        return torch.zeros(
+            (Phi_t.shape[0], Phi_t.shape[1], Phi_t.shape[1]), device=device
+        )
 
     U, *_ = torch.linalg.svd(Phi_t, full_matrices=False)
     P = U @ U.transpose(1, 2)
 
     if perp:
-        return torch.eye(P.shape[1]).to(device)[None, :, :] - P
+        return torch.eye(P.shape[1], device=device)[None, :, :] - P
 
     return P
 
@@ -26,7 +28,9 @@ def projection(
 def estimate_y(
     Phi: torch.Tensor, y: torch.Tensor, indices, device: str | torch.device = DEVICE
 ) -> torch.Tensor:
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).to(device).reshape((-1, 1))
+    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(
+        (-1, 1)
+    )
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
     P = projection(Phi_t, perp=True, device=device)
     return P @ y
@@ -36,12 +40,14 @@ def estimate_x(
     Phi: torch.Tensor, y: torch.Tensor, indices, device: str | torch.device = DEVICE
 ) -> torch.Tensor:
     if indices is None:
-        return torch.zeros(Phi.shape[0], Phi.shape[2], 1).to(device)
+        return torch.zeros(Phi.shape[0], Phi.shape[2], 1, device=device)
 
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).to(device).reshape((-1, 1))
+    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(
+        (-1, 1)
+    )
 
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
-    x_hat = torch.zeros((Phi.shape[0], Phi.shape[2], 1)).to(device)
+    x_hat = torch.zeros((Phi.shape[0], Phi.shape[2], 1), device=device)
 
     x_hat[batches, indices] = torch.linalg.pinv(Phi_t) @ y
     return x_hat
@@ -55,10 +61,10 @@ def ip_objective(
     device: str | torch.device = DEVICE,
 ) -> torch.Tensor:
     if columns is None:
-        columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(device)
+        columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     if batches is None:
-        batches = batches or torch.arange(Phi.shape[0], dtype=torch.long).to(
-            device
+        batches = batches or torch.arange(
+            Phi.shape[0], dtype=torch.long, device=device
         ).reshape(-1, 1)
 
     P = projection(Phi[batches, :, columns].transpose(1, 2), perp=True, device=device)
@@ -81,8 +87,10 @@ def omp(
     device: str | torch.device = DEVICE,
 ) -> dict:
     log = defaultdict(list)
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1)).to(device)
-    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(device)
+    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(
+        (-1, 1)
+    )
+    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     k = 0
     while k < Phi.shape[2]:
         P = projection(
@@ -122,8 +130,10 @@ def ip(
     device: str | torch.device = DEVICE,
 ) -> dict:
     log = defaultdict(list)
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1)).to(device)
-    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long).to(device)
+    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(
+        (-1, 1)
+    )
+    columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     k = 0
     while k < Phi.shape[2]:
         objective = ip_objective(
