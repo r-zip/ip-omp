@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from enum import Enum
 from itertools import product
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -224,10 +225,16 @@ def aggregate_results(results_dir: Path) -> None:
     df.write_parquet(results_dir / "results.parquet")
 
 
+class Device(str, Enum):
+    cuda = "cuda"
+    cpu = "cpu"
+
+
 def main(
     results_dir: Path,
     overwrite: bool = False,
     jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS),
+    device: Device = Device.cuda if DEVICE == "cuda" else Device.cpu,
 ):
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
@@ -253,9 +260,10 @@ def main(
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
-            while (DEVICE == "cuda") and not get_gpus():
+            while (device == "cuda") and not get_gpus():
                 sleep(0.1)
 
+            breakpoint()
             futures.append(
                 pool.submit(
                     run_experiment,
@@ -265,7 +273,7 @@ def main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
-                    device=get_gpus()[0],
+                    device=get_gpus()[0] if device == "cuda" else "cpu",
                 )
             )
 
