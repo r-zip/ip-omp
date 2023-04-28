@@ -238,21 +238,31 @@ def main(
 
         pool = ProcessPoolExecutor(max_workers=workers)
 
+        futures = []
+        finished = 0
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
             while (DEVICE == "cuda") and not get_gpus():
                 sleep(0.1)
 
-            pool.submit(
-                run_experiment,
-                k,
-                m,
-                n,
-                s,
-                output_dir=results_dir,
-                noise_std=noise_std,
+            futures.append(
+                pool.submit(
+                    run_experiment,
+                    k,
+                    m,
+                    n,
+                    s,
+                    output_dir=results_dir,
+                    noise_std=noise_std,
+                )
             )
+
+            for future in futures:
+                if future.done():
+                    finished += 1
+                    logger.info(f"Finished {finished} / {NUM_SETTINGS} jobs")
+                    futures.remove(future)
 
     else:
         for k, ((m, n), s, noise_std) in enumerate(
