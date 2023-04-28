@@ -38,7 +38,7 @@ def estimate_x(
     if indices is None:
         return torch.zeros(Phi.shape[0], Phi.shape[2], 1).to(device)
 
-    batches = torch.arange(Phi.shape[0], dtype=torch.long).reshape((-1, 1))
+    batches = torch.arange(Phi.shape[0], dtype=torch.long).to(device).reshape((-1, 1))
 
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
     x_hat = torch.zeros((Phi.shape[0], Phi.shape[2], 1)).to(device)
