@@ -31,16 +31,26 @@ SETTINGS = {
         # (500, 500),
         (500, 750),
         (500, 1000),
-        # (500, 1250),
-        # (500, 1500),
+        (500, 1250),
+        (500, 1500),
     ],
     "sparsity": [
-        # 0.01,
+        0.025,
         0.05,
+        0.075,
         0.1,
-        # 0.2,
-        # 0.3,
-        # 0.4,
+        0.125,
+        0.15,
+        0.175,
+        0.2,
+        0.225,
+        0.25,
+        0.275,
+        0.3,
+        0.325,
+        0.35,
+        0.375,
+        0.4,
     ],
     "noise_std": [
         0.0,
@@ -220,7 +230,28 @@ def aggregate_results(results_dir: Path) -> None:
     dfs = []
     for path in results_dir.iterdir():
         if path.is_dir() and (f := (path / "results.parquet")).exists():
-            dfs.append(pl.read_parquet(f))
+            dfs.append(
+                pl.read_parquet(f).select(
+                    "experiment_number",
+                    "m",
+                    "n",
+                    "measurement_rate",
+                    "mean_sparsity",
+                    "noise_std",
+                    "output_dir",
+                    "trial",
+                    "norm_x",
+                    "norm_y",
+                    "coherence",
+                    "iou",
+                    "iter",
+                    "algorithm",
+                    "recall",
+                    "precision",
+                    "mse_x",
+                    "mse_y",
+                )
+            )
 
     df = pl.concat(dfs, how="vertical")
     df.write_parquet(results_dir / "results.parquet")
