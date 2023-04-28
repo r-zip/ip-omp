@@ -260,10 +260,12 @@ def main(
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
         ):
+            if device == "cuda":
+                sleep(0.1)
+
             while (device == "cuda") and not get_gpus():
                 sleep(0.1)
 
-            breakpoint()
             futures.append(
                 pool.submit(
                     run_experiment,
