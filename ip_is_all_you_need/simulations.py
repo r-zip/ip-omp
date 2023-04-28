@@ -227,7 +227,7 @@ def main(
 
     if jobs > 1:
         if DEVICE == "cuda":
-            workers = min(jobs, get_gpus())
+            workers = min(jobs, len(get_gpus()))
         else:
             workers = min(jobs, cpu_count())
 
