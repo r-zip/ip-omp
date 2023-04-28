@@ -90,7 +90,7 @@ def omp(
         objective = torch.abs(Phi.transpose(1, 2) @ residual)
         log["objective"].append(objective.max(dim=1).values.ravel().tolist())
         curr_indices = objective.argmax(dim=1)
-        columns = torch.cat((columns, curr_indices), dim=1)
+        columns = torch.cat((columns, curr_indices), dim=1).to(DEVICE)
 
         log["indices"].append(curr_indices.ravel().tolist())
         y_hat = estimate_y(Phi, y, columns)
@@ -127,7 +127,7 @@ def ip(
         log["objective"].append(max_objective.ravel().tolist())
 
         curr_indices = objective.argmax(dim=1)
-        columns = torch.cat((columns, curr_indices), dim=1).to(DEVICE)
+        columns = torch.cat((columns, curr_indices), dim=1)
 
         # TODO: fix summarize code to take this as input (no longer list of lists)
         log["indices"].append(curr_indices.ravel().tolist())
