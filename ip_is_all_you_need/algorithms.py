@@ -127,7 +127,7 @@ def ip(
         log["objective"].append(max_objective.ravel().tolist())
 
         curr_indices = objective.argmax(dim=1)
-        columns = torch.cat((columns, curr_indices), dim=1)
+        columns = torch.cat((columns, curr_indices), dim=1).to(DEVICE)
 
         # TODO: fix summarize code to take this as input (no longer list of lists)
         log["indices"].append(curr_indices.ravel().tolist())
