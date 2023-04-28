@@ -280,8 +280,11 @@ def main(
                     logger.info(f"Finished {finished} / {NUM_SETTINGS} jobs")
                     futures.remove(future)
                 elif e := future.exception():
-                    logger.exception(e.__traceback__)
-                    logger.info(f"Future failed with exception: {e}")
+                    logger.exception(f"Exception raised by subprocess: {e}")
+                    try:
+                        pass
+                    except:
+                        raise
 
             if device == "cuda":
                 sleep(0.1)
