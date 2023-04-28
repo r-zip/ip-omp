@@ -279,6 +279,7 @@ def main(
                     logger.info(f"Finished {finished} / {NUM_SETTINGS} jobs")
                     futures.remove(future)
                 elif e := future.exception():
+                    logger.exception(e)
                     logger.info(f"Future failed with exception: {e}")
 
             if device == "cuda":
