@@ -8,6 +8,7 @@ from pathlib import Path
 import GPUtil
 import polars as pl
 import torch
+import torch.multiprocessing as mp
 import typer
 from rich.logging import RichHandler
 from tqdm import tqdm
@@ -213,6 +214,7 @@ def main(
     overwrite: bool = False,
     jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS),
 ):
+    mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
         FileExistsError(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
