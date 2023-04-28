@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from itertools import chain, product, repeat
+from itertools import product
 from multiprocessing import cpu_count
 from pathlib import Path
 
@@ -26,13 +26,13 @@ SETTINGS = {
     "dimensions": [
         # (500, 500),
         (500, 750),
-        # (500, 1000),
+        (500, 1000),
         # (500, 1250),
         # (500, 1500),
     ],
     "sparsity": [
         # 0.01,
-        # 0.05,
+        0.05,
         0.1,
         # 0.2,
         # 0.3,
@@ -160,6 +160,7 @@ def run_experiment(
         logger.info("Generating metrics for OMP")
         metrics_omp = compute_metrics(log_omp, true_support, x, y, Phi, "omp")
 
+        logger.info("Combining metrics")
         df = pl.concat(
             [pl.DataFrame(metrics_ip), pl.DataFrame(metrics_omp)], how="vertical"
         )
@@ -192,7 +193,19 @@ def run_experiment(
             )
         )
 
-        df.write_parquet(output_dir / "results.parquet")
+        results_file = experiment_results_dir / "results.parquet"
+        logger.info(f"Writing results to {results_file}")
+        df.write_parquet(results_file)
+
+
+def aggregate_results(results_dir: Path) -> None:
+    dfs = []
+    for path in results_dir.iterdir():
+        if path.is_dir() and (f := (path / "results.parquet")).exists():
+            dfs.append(pl.read_parquet(f))
+
+    df = pl.concat(dfs, how="vertical")
+    df.write_parquet(results_dir / "results.parquet")
 
 
 def main(
@@ -222,7 +235,6 @@ def main(
 
         pool = ProcessPoolExecutor(max_workers=workers)
 
-        gpus = chain(gpu_list, repeat(None))
         futures = []
         for k, ((m, n), s, noise_std) in enumerate(
             product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
@@ -236,12 +248,12 @@ def main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
-                    gpu_number=next(gpus),
                 )
             )
         # progress bar
-        for _ in tqdm(as_completed(futures), total=len(futures)):
-            pass
+        for f in tqdm(as_completed(futures), total=len(futures)):
+            if e := f.exception():
+                logger.info(f"Future failed with exception: {e}")
     else:
         for k, ((m, n), s, noise_std) in enumerate(
             tqdm(
@@ -261,6 +273,8 @@ def main(
                 output_dir=results_dir,
                 noise_std=noise_std,
             )
+
+    aggregate_results(results_dir)
 
     logger.info("Done!")
 
