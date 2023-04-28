@@ -28,7 +28,7 @@ def estimate_y(
 ) -> torch.Tensor:
     batches = torch.arange(Phi.shape[0], dtype=torch.long).to(device).reshape((-1, 1))
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
-    P = projection(Phi_t, perp=True)
+    P = projection(Phi_t, perp=True, device=device)
     return P @ y
 
 
