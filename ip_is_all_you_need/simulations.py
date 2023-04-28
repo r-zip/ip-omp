@@ -53,7 +53,7 @@ NUM_SETTINGS = len(list(product(*list(SETTINGS.values()))))
 
 def get_gpus():
     return GPUtil.getAvailable(
-        maxLoad=0.1, maxMemory=0.15, limit=float("inf"), order="load"
+        maxLoad=0.1, maxMemory=0.15, limit=float("inf"), order="memory"
     )
 
 
