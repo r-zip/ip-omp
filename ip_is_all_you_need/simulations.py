@@ -308,7 +308,7 @@ def main(
                     s,
                     output_dir=results_dir,
                     noise_std=noise_std,
-                    device=device,
+                    device_type=device,
                 )
             )
 
