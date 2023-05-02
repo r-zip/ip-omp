@@ -30,27 +30,27 @@ logger = logging.getLogger()
 SETTINGS = {
     "dimensions": [
         # (500, 750),
-        (500, 1000),
+        (800, 1000),
         # (500, 1250),
         # (500, 1500),
     ],
     "sparsity": [
-        # 0.025,
+        0.025,
         0.05,
-        # 0.075,
-        # 0.1,
-        # 0.125,
-        # 0.15,
-        # 0.175,
-        # 0.2,
-        # 0.225,
-        # 0.25,
-        # 0.275,
-        # 0.3,
-        # 0.325,
-        # 0.35,
-        # 0.375,
-        # 0.4,
+        0.075,
+        0.1,
+        0.125,
+        0.15,
+        0.175,
+        0.2,
+        0.225,
+        0.25,
+        0.275,
+        0.3,
+        0.325,
+        0.35,
+        0.375,
+        0.4,
     ],
     "noise_std": [
         0.0,
@@ -209,13 +209,13 @@ def run_experiment(
             device=device,
             coeff_distribution="sparse_gaussian",
         )
-        nnz = torch.count_nonzero(x, axis=1)
 
         true_support = get_true_support(x)
+        num_iterations = min(2 * floor(s * n), n)
         logger.info("Running IP")
-        log_ip = ip(Phi, y, num_iterations=nnz.max().item(), device=device)
+        log_ip = ip(Phi, y, num_iterations=num_iterations, device=device)
         logger.info("Running OMP")
-        log_omp = omp(Phi, y, num_iterations=nnz.max().item(), device=device)
+        log_omp = omp(Phi, y, num_iterations=num_iterations, device=device)
 
         # tranpose logs
         log_ip = transpose_log(log_ip)
@@ -323,7 +323,7 @@ def main(
     for k, ((m, n), s, noise_std) in enumerate(
         product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
     ):
-        if s * n > m:
+        if (s * n > m) or (floor(s * n) == 0):
             continue
 
         if jobs > 1:

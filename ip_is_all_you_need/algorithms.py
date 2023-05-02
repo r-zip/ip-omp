@@ -1,9 +1,12 @@
+import logging
 from collections import defaultdict
 
 import numpy as np
 import torch
 
 from .constants import DEVICE
+
+logger = logging.getLogger(__name__)
 
 
 def projection(
@@ -93,6 +96,7 @@ def omp(
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     k = 0
     while k < Phi.shape[2]:
+        logger.debug(f"OMP iteration {k} / {num_iterations}")
         P = projection(
             Phi[batches, :, columns].transpose(1, 2), perp=True, device=device
         )
@@ -136,6 +140,7 @@ def ip(
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     k = 0
     while k < Phi.shape[2]:
+        logger.debug(f"IP iteration {k} / {num_iterations}")
         objective = ip_objective(
             Phi, y, batches=batches, columns=columns, device=device
         )
