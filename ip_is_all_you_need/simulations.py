@@ -244,8 +244,6 @@ def run_experiment(
             .alias("iou")
         )
 
-        # FIXME
-        # above pivot table appears correct, but for some reason, iou collapses into single sequence over trials
         df = (
             df.join(pivot_table, on=["trial", "iter"])
             .drop(["ip", "omp"])
