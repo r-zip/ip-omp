@@ -39,7 +39,7 @@ def estimate_y(
     return P @ y
 
 
-def estimate_x(
+def estimate_x_and_y(
     Phi: torch.Tensor, y: torch.Tensor, indices, device: str | torch.device = DEVICE
 ) -> torch.Tensor:
     if indices is None:
@@ -52,8 +52,9 @@ def estimate_x(
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
     x_hat = torch.zeros((Phi.shape[0], Phi.shape[2], 1), device=device)
 
-    x_hat[batches, indices] = torch.linalg.pinv(Phi_t) @ y
-    return x_hat
+    # equivalent to left-multiplying y by pseudoinverse of Phi_t
+    x_hat[batches, indices] = torch.linalg.lstsq(Phi_t, y).solution
+    return x_hat, Phi @ x_hat
 
 
 def ip_objective(
@@ -117,10 +118,9 @@ def omp(
         columns = torch.cat((columns, curr_indices), dim=1)
 
         log["indices"].append(curr_indices.ravel().tolist())
-        y_hat = estimate_y(Phi, y, columns, device=device)
-        log["y_hat"].append(y_hat)
-        x_hat = estimate_x(Phi, y, columns, device=device)
+        x_hat, y_hat = estimate_x_and_y(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
+        log["y_hat"].append(y_hat)
         k += 1
 
     return dict(log)
@@ -161,10 +161,9 @@ def ip(
 
         # TODO: fix summarize code to take this as input (no longer list of lists)
         log["indices"].append(curr_indices.ravel().tolist())
-        y_hat = estimate_y(Phi, y, columns, device=device)
-        log["y_hat"].append(y_hat)
-        x_hat = estimate_x(Phi, y, columns, device=device)
+        x_hat, y_hat = estimate_x_and_y(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
+        log["y_hat"].append(y_hat)
         k += 1
 
     return dict(log)
