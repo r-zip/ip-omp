@@ -122,13 +122,12 @@ def compute_metrics(
     metrics = []
     for trial, (indices, x_hat, y_hat, Phi, support, x, y) in enumerate(
         zip(log["indices"], log["x_hat"], log["y_hat"], Phis, true_support, xs, ys),
-        start=1,
     ):
         coherence = mutual_coherence(Phi)
         nnz = len(support)
         norm_x = torch.linalg.norm(x).item()
         norm_y = torch.linalg.norm(y).item()
-        for iter, (x_hat_t, y_hat_t) in enumerate(zip(x_hat, y_hat), start=1):
+        for iter, (x_hat_t, y_hat_t) in enumerate(zip(x_hat, y_hat)):
             metrics_now = {
                 "trial": trial,
                 "iter": iter,
@@ -218,6 +217,8 @@ def run_experiment(
             .alias("iou")
         )
 
+        # FIXME
+        # above pivot table appears correct, but for some reason, iou collapses into single sequence over trials
         df = (
             df.join(pivot_table, on=["trial", "iter"])
             .drop(["ip", "omp"])
@@ -283,23 +284,21 @@ def main(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
-    if jobs > 1:
-        if device == Device.cuda:
-            workers = min(jobs, len(get_gpus()), NUM_SETTINGS)
-        else:
-            workers = min(jobs, cpu_count(), NUM_SETTINGS)
+    if device == Device.cuda:
+        workers = min(jobs, len(get_gpus()), NUM_SETTINGS)
+    else:
+        workers = min(jobs, cpu_count(), NUM_SETTINGS)
 
-        if workers < jobs:
-            logger.info(
-                f"Running {workers} jobs; {jobs} was too many for system resources"
-            )
+    if workers < jobs:
+        logger.info(f"Running {workers} jobs; {jobs} was too many for system resources")
 
-        pool = ProcessPoolExecutor(max_workers=workers)
+    pool = ProcessPoolExecutor(max_workers=workers)
 
-        futures = []
-        for k, ((m, n), s, noise_std) in enumerate(
-            product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
-        ):
+    futures = []
+    for k, ((m, n), s, noise_std) in enumerate(
+        product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
+    ):
+        if jobs > 1:
             futures.append(
                 pool.submit(
                     run_experiment,
@@ -311,6 +310,16 @@ def main(
                     noise_std=noise_std,
                     device_type=device,
                 )
+            )
+        else:
+            run_experiment(
+                k,
+                m,
+                n,
+                s,
+                output_dir=results_dir,
+                noise_std=noise_std,
+                device_type=device,
             )
 
     for f in tqdm(as_completed(futures), total=len(futures)):
