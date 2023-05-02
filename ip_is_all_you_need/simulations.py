@@ -4,6 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
+from math import floor
 from multiprocessing import cpu_count
 from pathlib import Path
 from time import sleep
@@ -85,11 +86,33 @@ def generate_measurements_and_coeffs(
     p: float = 0.01,
     noise_std: float = 0.0,
     device: str | torch.device = DEVICE,
+    coeff_distribution: str = "sparse_gaussian",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, m, n = Phi.shape
-    supp = torch.rand(batch_size, n, 1, device=device) <= p
     x = torch.zeros(batch_size, n, 1, device=device)
-    x[supp] = torch.randn(int(supp.sum().item()), device=device)
+
+    if coeff_distribution == "bernoulli_gaussian":
+        supp = torch.rand(batch_size, n, 1, device=device) <= p
+        x[supp] = torch.randn(int(supp.sum().item()), device=device)
+    elif coeff_distribution == "sparse_gaussian":
+        s = floor(p * n)
+        bool_index = torch.hstack(
+            [
+                torch.ones(s, device=device, dtype=torch.bool),
+                torch.zeros(n - s, device=device, dtype=torch.bool),
+            ]
+        )
+        supp = torch.vstack(
+            [
+                bool_index[torch.randperm(n, device=device)].clone()
+                for _ in range(batch_size)
+            ]
+        )[:, :, None]
+        values = torch.randn(batch_size * s, device=device)
+        x[supp] = values
+    else:
+        raise ValueError(f"coeff_distribution {coeff_distribution} not understood.")
+
     return (Phi @ x + noise_std * torch.randn(batch_size, m, 1, device=device)), x
 
 
@@ -180,7 +203,11 @@ def run_experiment(
         )
         Phi = gen_dictionary(TRIALS, m, n, device=device)
         y, x = generate_measurements_and_coeffs(
-            Phi, p=s, noise_std=noise_std, device=device
+            Phi,
+            p=s,
+            noise_std=noise_std,
+            device=device,
+            coeff_distribution="sparse_gaussian",
         )
         nnz = torch.count_nonzero(x, axis=1)
 
@@ -298,6 +325,9 @@ def main(
     for k, ((m, n), s, noise_std) in enumerate(
         product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
     ):
+        if s * n > m:
+            continue
+
         if jobs > 1:
             futures.append(
                 pool.submit(
