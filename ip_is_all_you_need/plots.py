@@ -8,12 +8,18 @@ import typer
 
 sns.set_context("notebook")
 sns.set_palette("deep")
+ERROR_BAR_ALPHA = 0.2
 
 c = pl.col
 
 
 def plot_trial(
-    df: pl.DataFrame, experiment_number: int, algorithm: str, metric: str, trial: int, save_path: Path,
+    df: pl.DataFrame,
+    experiment_number: int,
+    algorithm: str,
+    metric: str,
+    trial: int,
+    save_path: Path,
 ) -> None:
     df_filtered = df.filter(
         (c("experiment_number") == experiment_number)
@@ -31,6 +37,7 @@ def plot_trial(
         metric_values.max(),
         linestyles=["--"],
     )
+    plt.tight_layout()
     plt.savefig(save_path, dpi=300)
 
 
@@ -126,7 +133,7 @@ def plot_timeseries(
     metric: str,
     save_path: Path,
     central_tendency: str = "mean",
-    error_bars: str = "std",
+    error_bars: str = "iqr",
 ) -> None:
     xforms = defaultdict(lambda: identity)
     xforms["rel_mse_x"] = xforms["rel_mse_y"] = lambda x: x.log10() * 10
@@ -135,7 +142,7 @@ def plot_timeseries(
     metric_to_ylabel = {
         "iou": "IOU",
         "mse_x": r"$\log_{10} ||x - \widehat{x}||_2^2$",
-        "mse_y": r"$\log_{10} ||y - \widehat{y}||_2^2",
+        "mse_y": r"$\log_{10} ||y - \widehat{y}||_2^2$",
         "rel_mse_x": r"$10 \log_{10}(||x - \widehat{x}||_2^2\,/\,||x||_2^2)$",
         "rel_mse_y": r"$10 \log_{10}(||y - \widehat{y}||_2^2\,/\,||y||_2^2)$",
         "precision": "Precision",
@@ -176,21 +183,21 @@ def plot_timeseries(
                 rel_iter,
                 xform(df_ts[f"{metric}_lo"]),
                 xform(df_ts[f"{metric}_hi"]),
-                alpha=0.3,
+                alpha=ERROR_BAR_ALPHA,
             )
         elif error_bars == "min_max":
             plt.fill_between(
                 rel_iter_ip,
                 xform(df_ts[f"{metric}_min"]),
                 xform(df_ts[f"{metric}_max"]),
-                alpha=0.3,
+                alpha=ERROR_BAR_ALPHA,
             )
         elif error_bars == "std":
             plt.fill_between(
                 rel_iter_ip,
                 xform(center - df_ts[f"{metric}_std"]),
                 xform(center + df_ts[f"{metric}_std"]),
-                alpha=0.3,
+                alpha=ERROR_BAR_ALPHA,
             )
         else:
             raise ValueError(f"error_bars value {error_bars} not understood.")
@@ -206,9 +213,16 @@ def plot_timeseries(
             markerfacecolor="none",
         )
         plot_error_bars(rel_iter_omp, center_omp, df_ts_omp)
-        plt.legend(["IP Mean", "IP IQR", "OMP Mean", "OMP IQR"])
+        plt.legend(
+            [
+                f"IP {central_tendency.title()}",
+                "IP IQR",
+                f"OMP {central_tendency.title()}",
+                "OMP IQR",
+            ]
+        )
     else:
-        plt.legend(["Mean", "Min/Max"])
+        plt.legend([f"{central_tendency.title()}", "Min/Max"])
     plt.xlabel("Iteration / # Iterations")
     plt.ylabel(f"{metric_to_ylabel[metric]}")
     plt.title(
@@ -217,6 +231,7 @@ def plot_timeseries(
     plt.grid("on")
 
     plt.savefig(save_path, dpi=300)
+    plt.close()
 
 
 def get_phase_transition_data(df: pl.DataFrame) -> pl.DataFrame:
@@ -253,8 +268,27 @@ def get_phase_transition_data(df: pl.DataFrame) -> pl.DataFrame:
     return df_pt
 
 
-def main():
-    pass
+def main(results_dir: Path, central_tendency: str = "mean", error_bars: str = "iqr"):
+    df = pl.read_parquet(results_dir / "results.parquet")
+    for experiment_number in sorted(df["experiment_number"].unique()):
+        df_ts = get_time_series_data(df, experiment_number)
+        for metric in [
+            "rel_mse_x",
+            "rel_mse_y",
+            "precision",
+            "recall",
+            "iou",
+            "mse_x",
+            "mse_y",
+        ]:
+            plot_timeseries(
+                df_ts,
+                experiment_number,
+                metric,
+                Path("figures") / f"experiment_{experiment_number}_{metric}.png",
+                central_tendency=central_tendency,
+                error_bars=error_bars,
+            )
 
 
 # %%
