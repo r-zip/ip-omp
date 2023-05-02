@@ -32,7 +32,7 @@ def estimate_y(
         (-1, 1)
     )
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
-    P = projection(Phi_t, perp=True, device=device)
+    P = projection(Phi_t, perp=False, device=device)
     return P @ y
 
 
