@@ -4,7 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
-from math import floor
+from math import ceil, floor
 from multiprocessing import cpu_count
 from pathlib import Path
 from time import sleep
@@ -29,38 +29,23 @@ logger = logging.getLogger()
 # fmt: off
 SETTINGS = {
     "dimensions": [
-        # (500, 750),
+        (500, 1000),
+        (550, 1000),
+        (600, 1000),
+        (650, 1000),
+        (700, 1000),
+        (750, 1000),
         (800, 1000),
-        # (500, 1250),
-        # (500, 1500),
+        (850, 1000),
+        (900, 1000),
     ],
-    "sparsity": [
-        # 0.025,
-        # 0.05,
-        # 0.075,
-        # 0.1,
-        # 0.125,
-        # 0.15,
-        # 0.175,
-        # 0.2,
-        0.225,
-        0.25,
-        0.275,
-        0.3,
-        0.325,
-        0.35,
-        0.375,
-        0.4,
-    ],
-    "noise_std": [
-        0.0,
-        0.01,
-        0.1,
-    ],
+    "sparsity": torch.arange(0.05, 0.45, 0.05).tolist(),
+    "noise_std": [0.0],
 }
 # fmt: on
 
 NUM_SETTINGS = len(list(product(*list(SETTINGS.values()))))
+DTYPE = torch.float64
 
 
 class Device(str, Enum):
@@ -186,7 +171,8 @@ def run_experiment(
 ) -> None:
     if device_type == Device.cuda:
         while not (gpus := get_gpus()):
-            sleep(0.01)
+            logger.info("Waiting for available GPU...")
+            sleep(1)
 
         device = f"cuda:{gpus[0]}"
     else:
@@ -211,7 +197,7 @@ def run_experiment(
         )
 
         true_support = get_true_support(x)
-        num_iterations = min(2 * floor(s * n), n)
+        num_iterations = min(2 * ceil(s * n), n)
         logger.info("Running IP")
         log_ip = ip(Phi, y, num_iterations=num_iterations, device=device)
         logger.info("Running OMP")
@@ -323,6 +309,7 @@ def main(
     for k, ((m, n), s, noise_std) in enumerate(
         product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
     ):
+        # skip settings where sparsity is too high or low to be interesting
         if (s * n > m) or (floor(s * n) == 0):
             continue
 
@@ -364,4 +351,5 @@ def main(
 
 
 if __name__ == "__main__":
+    torch.set_default_dtype(torch.float64)
     typer.run(main)
