@@ -350,6 +350,9 @@ def main(
                 device_type=device,
             )
 
+        if k < jobs:
+            sleep(2)
+
     for f in tqdm(as_completed(futures), total=len(futures)):
         if e := f.exception():
             logger.exception(e)
