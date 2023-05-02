@@ -151,7 +151,7 @@ def plot(interpolated: dict[str, np.ndarray], settings: dict[str, float], path: 
     plt.ylabel(key_to_ylabel("iou"), fontsize="x-large")
     plt.ylim((-0.025, 1.025))
     plt.tight_layout()
-    plt.savefig(path / f"iou.png", dpi=300)
+    plt.savefig(path / "iou.png", dpi=300)
     plt.close()
 
 
