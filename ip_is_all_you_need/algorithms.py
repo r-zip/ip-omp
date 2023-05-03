@@ -86,7 +86,7 @@ def ip_objective(
 def omp(
     Phi: torch.Tensor,
     y: torch.Tensor,
-    tol: float = 1e-6,
+    tol: float = 1e-12,
     num_iterations: int | None = None,
     device: str | torch.device = DEVICE,
 ) -> dict:
@@ -103,13 +103,12 @@ def omp(
         )
         residual = P @ y
 
-        # TODO: rethink termination criterion
         squared_error = residual.transpose(1, 2) @ residual
-        if num_iterations is None and (
-            (squared_error < tol).all() or k == Phi.shape[2] - 1
+        if (
+            (squared_error < tol).all()
+            or (k == Phi.shape[2] - 1)
+            or (k == num_iterations)
         ):
-            break
-        elif k == num_iterations:
             break
 
         objective = torch.abs(Phi.transpose(1, 2) @ residual)
@@ -129,7 +128,7 @@ def omp(
 def ip(
     Phi: torch.Tensor,
     y: torch.Tensor,
-    tol: float = 1e-6,
+    tol: float = 1e-12,
     num_iterations: int | None = None,
     device: str | torch.device = DEVICE,
 ) -> dict:
@@ -146,12 +145,11 @@ def ip(
         )
         max_objective = objective.max(dim=1).values
 
-        # TODO: rethink termination criterion
-        if num_iterations is None and (
-            (max_objective < tol).all() or k == Phi.shape[2] - 1
+        if (
+            (max_objective < tol).all()
+            or (k == Phi.shape[2] - 1)
+            or k == num_iterations
         ):
-            break
-        elif k == num_iterations:
             break
 
         log["objective"].append(max_objective.ravel().tolist())
@@ -159,7 +157,6 @@ def ip(
         curr_indices = objective.argmax(dim=1)
         columns = torch.cat((columns, curr_indices), dim=1)
 
-        # TODO: fix summarize code to take this as input (no longer list of lists)
         log["indices"].append(curr_indices.ravel().tolist())
         x_hat, y_hat = estimate_x_and_y(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
