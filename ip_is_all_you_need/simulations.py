@@ -55,7 +55,7 @@ class Device(str, Enum):
 
 def get_gpus():
     return GPUtil.getAvailable(
-        maxLoad=0.5, maxMemory=0.5, limit=float("inf"), order="memory"
+        maxLoad=0.5, maxMemory=1.0, limit=float("inf"), order="load"
     )
 
 
