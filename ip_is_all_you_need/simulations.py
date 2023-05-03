@@ -30,31 +30,31 @@ logger = logging.getLogger()
 SETTINGS = {
     "dimensions": [
         (500, 1000),
-        (600, 1000),
-        (700, 1000),
-        (800, 1000),
-        (900, 1000),
-        (550, 1000),
-        (650, 1000),
-        (750, 1000),
-        (850, 1000),
+        # (600, 1000),
+        # (700, 1000),
+        # (800, 1000),
+        # (900, 1000),
+        # (550, 1000),
+        # (650, 1000),
+        # (750, 1000),
+        # (850, 1000),
     ],
     "sparsity": [
-        0.1,
+        # 0.1,
         0.2,
-        0.3,
-        0.4,
-        0.05,
-        0.15,
-        0.25,
-        0.35,
-        0.075,
-        0.125,
-        0.175,
-        0.225,
-        0.275,
-        0.325,
-        0.375,
+        # 0.3,
+        # 0.4,
+        # 0.05,
+        # 0.15,
+        # 0.25,
+        # 0.35,
+        # 0.075,
+        # 0.125,
+        # 0.175,
+        # 0.225,
+        # 0.275,
+        # 0.325,
+        # 0.375,
     ],
     "noise_std": [0.0],
 }
@@ -144,18 +144,30 @@ def compute_metrics(
     algorithm: str,
 ) -> list[dict[str, list[float]]]:
     metrics = []
-    for trial, (indices, x_hat, y_hat, Phi, support, x, y) in enumerate(
-        zip(log["indices"], log["x_hat"], log["y_hat"], Phis, true_support, xs, ys),
+    for trial, (objective, indices, x_hat, y_hat, Phi, support, x, y) in enumerate(
+        zip(
+            log["objective"],
+            log["indices"],
+            log["x_hat"],
+            log["y_hat"],
+            Phis,
+            true_support,
+            xs,
+            ys,
+        ),
     ):
         coherence = mutual_coherence(Phi)
         nnz = len(support)
         norm_x = torch.linalg.norm(x).item()
         norm_y = torch.linalg.norm(y).item()
-        for iter, (x_hat_t, y_hat_t) in enumerate(zip(x_hat, y_hat)):
+        for iter, (objective_t, x_hat_t, y_hat_t) in enumerate(
+            zip(objective, x_hat, y_hat)
+        ):
             metrics_now = {
                 "trial": trial,
                 "iter": iter,
                 "algorithm": algorithm,
+                "objective": objective_t,
                 "recall": recall(indices[: iter + 1], support),
                 "precision": precision(indices[: iter + 1], support),
                 "mse_x": mse(x_hat_t, x),
@@ -213,7 +225,10 @@ def run_experiment(
         )
 
         true_support = get_true_support(x)
-        num_iterations = min(2 * ceil(s * n), n)
+
+        # run for a max of n iterations (worst case--should terminate early)
+        num_iterations = n
+
         logger.info("Running IP")
         log_ip = ip(Phi, y, num_iterations=num_iterations, device=device)
         logger.info("Running OMP")
