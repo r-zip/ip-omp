@@ -4,7 +4,6 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
-from math import floor
 from multiprocessing import cpu_count
 from pathlib import Path
 from time import sleep
@@ -27,40 +26,35 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 # fmt: off
-SETTINGS = {
+SMALL_SETTINGS = {
     "dimensions": [
-        (500, 1000),
-        # (600, 1000),
-        # (700, 1000),
-        # (800, 1000),
-        # (900, 1000),
-        # (550, 1000),
-        # (650, 1000),
-        # (750, 1000),
-        # (850, 1000),
+        *[(m, 256) for m in range(4, 260, 4)],
     ],
     "sparsity": [
-        0.1,
-        # 0.2,
-        # 0.3,
-        # 0.4,
-        # 0.05,
-        # 0.15,
-        # 0.25,
-        # 0.35,
-        # 0.075,
-        # 0.125,
-        # 0.175,
-        # 0.225,
-        # 0.275,
-        # 0.325,
-        # 0.375,
+        4,
+        12,
+        20,
+        28,
+        36,
+    ],
+    "noise_std": [0.0],
+}
+
+LARGE_SETTINGS = {
+    "dimensions": [
+        *[(m, 1024) for m in range(5, 805, 5)],
+    ],
+    "sparsity": [
+        5,
+        10,
+        15,
     ],
     "noise_std": [0.0],
 }
 # fmt: on
 
-NUM_SETTINGS = len(list(product(*list(SETTINGS.values()))))
+NUM_SETTINGS_SMALL = len(list(product(*list(SMALL_SETTINGS.values()))))
+NUM_SETTINGS_LARGE = len(list(product(*list(LARGE_SETTINGS.values()))))
 DTYPE = torch.float64
 
 
@@ -84,7 +78,7 @@ def gen_dictionary(
 
 def generate_measurements_and_coeffs(
     Phi: torch.Tensor,
-    p: float = 0.01,
+    s: int,
     noise_std: float = 0.0,
     device: str | torch.device = DEVICE,
     coeff_distribution: str = "sparse_gaussian",
@@ -93,10 +87,10 @@ def generate_measurements_and_coeffs(
     x = torch.zeros(batch_size, n, 1, device=device)
 
     if coeff_distribution == "bernoulli_gaussian":
+        p = s / n
         supp = torch.rand(batch_size, n, 1, device=device) <= p
         x[supp] = torch.randn(int(supp.sum().item()), device=device)
     elif coeff_distribution == "sparse_gaussian":
-        s = floor(p * n)
         bool_index = torch.hstack(
             [
                 torch.ones(s, device=device, dtype=torch.bool),
@@ -192,7 +186,7 @@ def run_experiment(
     experiment_number: int,
     m: int,
     n: int,
-    s: float,
+    s: int,
     noise_std: float,
     output_dir: Path,
     device_type: Device,
@@ -218,7 +212,7 @@ def run_experiment(
         Phi = gen_dictionary(TRIALS, m, n, device=device)
         y, x = generate_measurements_and_coeffs(
             Phi,
-            p=s,
+            s=s,
             noise_std=noise_std,
             device=device,
             coeff_distribution="sparse_gaussian",
@@ -226,13 +220,11 @@ def run_experiment(
 
         true_support = get_true_support(x)
 
-        # run for a max of n iterations (worst case--should terminate early)
-        num_iterations = n
-
+        # run for num iterations = sparsity (as in Tropp/Gilbert paper)
         logger.info("Running IP")
-        log_ip = ip(Phi, y, num_iterations=num_iterations, device=device)
+        log_ip = ip(Phi, y, num_iterations=s, device=device)
         logger.info("Running OMP")
-        log_omp = omp(Phi, y, num_iterations=num_iterations, device=device)
+        log_omp = omp(Phi, y, num_iterations=s, device=device)
 
         # tranpose logs
         log_ip = transpose_log(log_ip)
@@ -270,7 +262,7 @@ def run_experiment(
                     pl.lit(m).alias("m"),
                     pl.lit(n).alias("n"),
                     pl.lit(m / n).alias("measurement_rate"),
-                    pl.lit(s).alias("mean_sparsity"),
+                    pl.lit(s).alias("sparsity"),
                     pl.lit(noise_std).alias("noise_std"),
                     pl.lit(str(output_dir)).alias("output_dir"),
                 ]
@@ -292,7 +284,7 @@ def aggregate_results(results_dir: Path) -> None:
                     "m",
                     "n",
                     "measurement_rate",
-                    "mean_sparsity",
+                    "sparsity",
                     "noise_std",
                     "output_dir",
                     "trial",
@@ -314,11 +306,17 @@ def aggregate_results(results_dir: Path) -> None:
     df.write_parquet(results_dir / "results.parquet")
 
 
+class Setting(str, Enum):
+    small = "small"
+    large = "large"
+
+
 def main(
     results_dir: Path,
     overwrite: bool = False,
-    jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS),
+    jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS_LARGE),
     device: Device = Device.cuda if DEVICE == "cuda" else Device.cpu,
+    setting: Setting = Setting.small,
 ):
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
@@ -326,10 +324,17 @@ def main(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
-    if device == Device.cuda:
-        workers = min(jobs, len(get_gpus()), NUM_SETTINGS)
+    if setting == Setting.small:
+        settings = SMALL_SETTINGS
+        num_settings = NUM_SETTINGS_SMALL
     else:
-        workers = min(jobs, cpu_count(), NUM_SETTINGS)
+        settings = LARGE_SETTINGS
+        num_settings = NUM_SETTINGS_LARGE
+
+    if device == Device.cuda:
+        workers = min(jobs, len(get_gpus()), num_settings)
+    else:
+        workers = min(jobs, cpu_count(), num_settings)
 
     if workers < jobs:
         logger.info(f"Running {workers} jobs; {jobs} was too many for system resources")
@@ -338,12 +343,8 @@ def main(
 
     futures = []
     for k, ((m, n), s, noise_std) in enumerate(
-        product(SETTINGS["dimensions"], SETTINGS["sparsity"], SETTINGS["noise_std"])
+        product(settings["dimensions"], settings["sparsity"], settings["noise_std"])
     ):
-        # skip settings where sparsity is too high or low to be interesting
-        if (s * n > m) or (floor(s * n) == 0):
-            continue
-
         if jobs > 1:
             futures.append(
                 pool.submit(

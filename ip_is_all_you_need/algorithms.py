@@ -79,6 +79,8 @@ def ip_objective(
         Phi_projected / torch.linalg.norm(Phi_projected, dim=1)[:, None, :]
     )
 
+    # do not divide by norm of P @ y for numerical reasons
+    # (theoretically, this does not affect argmin anyway)
     objective = torch.abs(Phi_projected_normalized.transpose(1, 2) @ y)
 
     if normalize_y:
