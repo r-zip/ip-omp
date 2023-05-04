@@ -5,7 +5,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
 from multiprocessing import cpu_count
-from os import environ
 from pathlib import Path
 from time import sleep
 
@@ -22,7 +21,7 @@ from .constants import DEVICE, TRIALS
 from .metrics import iou, mse, mutual_coherence, precision, recall
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
 )
 logger = logging.getLogger()
 
@@ -64,16 +63,17 @@ class Device(str, Enum):
     cpu = "cpu"
 
 
-def get_gpus() -> list[int]:
+def get_gpus(
+    utilization: float = 0.25, memory_usage: float = 0.25, order_by: str = "utilization"
+) -> list[int]:
     gpus = GPUStatCollection.new_query()
-    username = environ["USER"]
     free_gpus = [
         g
         for g in gpus
-        if (g.utilization < 0.8)
-        and all([p["username"] == username for p in g.processes])
+        if (g.utilization < 0.5) and (g.memory_used / g.memory_total < 0.5)
     ]
-    return free_gpus
+
+    return sorted(free_gpus)
 
 
 def gen_dictionary(
