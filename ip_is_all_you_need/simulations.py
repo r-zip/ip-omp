@@ -5,6 +5,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
 from multiprocessing import cpu_count
+from os import environ
 from pathlib import Path
 from time import sleep
 
@@ -64,8 +65,15 @@ class Device(str, Enum):
 
 
 def get_gpus() -> list[int]:
-    gpus = [g for g in GPUStatCollection.new_query() if not g.processes]
-    return [g.index for g in sorted(gpus, key=lambda x: x.utilization)]
+    gpus = GPUStatCollection.new_query()
+    username = environ["USER"]
+    free_gpus = [
+        g
+        for g in gpus
+        if (g.utilization < 0.8)
+        and all([p["username"] == username for p in g.processes])
+    ]
+    return free_gpus
 
 
 def gen_dictionary(
