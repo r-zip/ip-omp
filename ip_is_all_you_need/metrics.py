@@ -9,7 +9,9 @@ def precision(estimated: list[int], true: list[int]) -> float:
     return len(set(estimated).intersection(set(true))) / len(estimated)
 
 
-def iou(set_1: list[int], set_2: list[int]) -> float:
+def iou(set_1: list[int] | None, set_2: list[int] | None) -> float | None:
+    if set_1 is None or set_2 is None:
+        return None
     return len(set(set_1).intersection(set_2)) / len(set(set_1).union(set_2))
 
 

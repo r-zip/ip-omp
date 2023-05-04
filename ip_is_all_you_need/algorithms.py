@@ -63,6 +63,7 @@ def ip_objective(
     columns: torch.Tensor | None = None,
     batches: torch.Tensor | None = None,
     device: str | torch.device = DEVICE,
+    normalize_y: bool = True,
 ) -> torch.Tensor:
     if columns is None:
         columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
@@ -79,6 +80,15 @@ def ip_objective(
     )
 
     objective = torch.abs(Phi_projected_normalized.transpose(1, 2) @ y)
+
+    if normalize_y:
+        y_projected = P @ y
+        y_projected_norm = torch.linalg.norm(y_projected, dim=1)[:, :, None]
+        logger.debug(
+            f"y_projected_norm.min() = {y_projected_norm.min()}, y_projected_norm.max() = {y_projected_norm.max()}"
+        )
+        objective = objective / y_projected_norm
+
     objective[batches, columns] = -np.inf
     return objective
 
@@ -144,6 +154,7 @@ def ip(
             Phi, y, batches=batches, columns=columns, device=device
         )
         max_objective = objective.max(dim=1).values
+        logger.debug(f"IP iteration {k}, max objective = {max_objective.max().item()}")
 
         if (
             (max_objective < tol).all()

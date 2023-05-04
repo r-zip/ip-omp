@@ -4,7 +4,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
-from math import ceil, floor
+from math import floor
 from multiprocessing import cpu_count
 from pathlib import Path
 from time import sleep
@@ -22,7 +22,7 @@ from .constants import DEVICE, TRIALS
 from .metrics import iou, mse, mutual_coherence, precision, recall
 
 logging.basicConfig(
-    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+    level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
 )
 logger = logging.getLogger()
 
@@ -40,8 +40,8 @@ SETTINGS = {
         # (850, 1000),
     ],
     "sparsity": [
-        # 0.1,
-        0.2,
+        0.1,
+        # 0.2,
         # 0.3,
         # 0.4,
         # 0.05,
@@ -117,7 +117,7 @@ def generate_measurements_and_coeffs(
     return (Phi @ x + noise_std * torch.randn(batch_size, m, 1, device=device)), x
 
 
-def get_true_support(x: torch.Tensor) -> list[set[int]]:
+def get_true_support(x: torch.Tensor) -> list[list[int]]:
     nonzeros = torch.nonzero(x.squeeze()).tolist()
 
     support_sets = defaultdict(set)
@@ -382,5 +382,6 @@ def main(
 
 
 if __name__ == "__main__":
+    torch.random.manual_seed(12345)
     torch.set_default_dtype(torch.float64)
     typer.run(main)
