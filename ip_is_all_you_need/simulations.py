@@ -5,6 +5,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
 from multiprocessing import cpu_count
+from operator import itemgetter
 from pathlib import Path
 from time import sleep
 
@@ -70,10 +71,12 @@ def get_gpus(
     free_gpus = [
         g
         for g in gpus
-        if (g.utilization < 0.5) and (g.memory_used / g.memory_total < 0.5)
+        if (g.utilization < utilization)
+        and (g.memory_used / g.memory_total < memory_usage)
     ]
 
-    return sorted(free_gpus)
+    free_gpus = sorted(free_gpus, key=itemgetter(order_by))
+    return [g.index for g in free_gpus]
 
 
 def gen_dictionary(
@@ -197,9 +200,16 @@ def run_experiment(
     noise_std: float,
     output_dir: Path,
     device_type: Device,
+    utilization: float,
+    memory_usage: float,
+    order_by: str,
 ) -> None:
     if device_type == Device.cuda:
-        while not (gpus := get_gpus()):
+        while not (
+            gpus := get_gpus(
+                utilization=utilization, memory_usage=memory_usage, order_by=order_by
+            )
+        ):
             logger.info("Waiting for available GPU...")
             sleep(1)
 
@@ -318,12 +328,20 @@ class Setting(str, Enum):
     large = "large"
 
 
+class OrderBy(str, Enum):
+    utilization = "utilization"
+    memory_usage = "memory_usage"
+
+
 def main(
     results_dir: Path,
     overwrite: bool = False,
     jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS_LARGE),
     device: Device = Device.cuda if DEVICE == "cuda" else Device.cpu,
     setting: Setting = Setting.small,
+    memory_usage: float = typer.Option(default=0.75, min=0.0, max=1.0),
+    utilization: float = typer.Option(default=0.75, min=0.0, max=1.0),
+    order_by: OrderBy = OrderBy.utilization,
 ):
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
@@ -339,7 +357,17 @@ def main(
         num_settings = NUM_SETTINGS_LARGE
 
     if device == Device.cuda:
-        workers = min(jobs, len(get_gpus()), num_settings)
+        workers = min(
+            jobs,
+            len(
+                get_gpus(
+                    utilization=utilization,
+                    memory_usage=memory_usage,
+                    order_by=order_by,
+                )
+            ),
+            num_settings,
+        )
     else:
         workers = min(jobs, cpu_count(), num_settings)
 
@@ -363,6 +391,9 @@ def main(
                     output_dir=results_dir,
                     noise_std=noise_std,
                     device_type=device,
+                    utilization=utilization,
+                    memory_usage=memory_usage,
+                    order_by=order_by,
                 )
             )
         else:
