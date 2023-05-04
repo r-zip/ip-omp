@@ -219,6 +219,7 @@ def run_experiment(
     memory_usage: float,
     order_by: str,
 ) -> None:
+    torch.random.manual_seed(12345)
     if device_type == Device.cuda:
         while not (
             gpus := get_gpus(
@@ -428,6 +429,5 @@ def main(
 
 
 if __name__ == "__main__":
-    torch.random.manual_seed(12345)
     torch.set_default_dtype(torch.float64)
     typer.run(main)
