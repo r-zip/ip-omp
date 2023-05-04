@@ -64,8 +64,20 @@ class Device(str, Enum):
     cpu = "cpu"
 
 
+class Setting(str, Enum):
+    small = "small"
+    large = "large"
+
+
+class OrderBy(str, Enum):
+    utilization = "utilization"
+    memory_usage = "memory_usage"
+
+
 def get_gpus(
-    utilization: float = 0.25, memory_usage: float = 0.25, order_by: str = "utilization"
+    utilization: float = 0.25,
+    memory_usage: float = 0.25,
+    order_by: OrderBy = "utilization",
 ) -> list[int]:
     gpus = GPUStatCollection.new_query()
     free_gpus = [
@@ -75,7 +87,7 @@ def get_gpus(
         and (g.memory_used / g.memory_total < memory_usage)
     ]
 
-    free_gpus = sorted(free_gpus, key=itemgetter(order_by))
+    free_gpus = sorted(free_gpus, key=itemgetter(str(order_by)))
     return [g.index for g in free_gpus]
 
 
@@ -321,16 +333,6 @@ def aggregate_results(results_dir: Path) -> None:
 
     df = pl.concat(dfs, how="vertical")
     df.write_parquet(results_dir / "results.parquet")
-
-
-class Setting(str, Enum):
-    small = "small"
-    large = "large"
-
-
-class OrderBy(str, Enum):
-    utilization = "utilization"
-    memory_usage = "memory_usage"
 
 
 def main(
