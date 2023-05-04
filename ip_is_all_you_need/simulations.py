@@ -73,6 +73,9 @@ class OrderBy(str, Enum):
     utilization = "utilization"
     memory_usage = "memory_usage"
 
+    def __str__(self) -> str:
+        return self.value
+
 
 def get_gpus(
     utilization: float = 0.25,
