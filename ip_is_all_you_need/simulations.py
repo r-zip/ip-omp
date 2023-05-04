@@ -5,7 +5,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum
 from itertools import product
 from multiprocessing import cpu_count
-from operator import itemgetter
+from operator import attrgetter
 from pathlib import Path
 from time import sleep
 
@@ -86,11 +86,11 @@ def get_gpus(
     free_gpus = [
         g
         for g in gpus
-        if (g.utilization < utilization)
+        if (g.utilization < utilization * 100)
         and (g.memory_used / g.memory_total < memory_usage)
     ]
 
-    free_gpus = sorted(free_gpus, key=itemgetter(str(order_by)))
+    free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
     return [g.index for g in free_gpus]
 
 
