@@ -8,11 +8,11 @@ from multiprocessing import cpu_count
 from pathlib import Path
 from time import sleep
 
-import GPUtil
 import polars as pl
 import torch
 import torch.multiprocessing as mp
 import typer
+from gpustat.core import GPUStatCollection
 from rich.logging import RichHandler
 from tqdm import tqdm
 
@@ -63,10 +63,8 @@ class Device(str, Enum):
     cpu = "cpu"
 
 
-def get_gpus():
-    return GPUtil.getAvailable(
-        maxLoad=0.5, maxMemory=1.0, limit=float("inf"), order="load"
-    )
+def get_gpus() -> list[int]:
+    return [g.index for g in GPUStatCollection().new_query() if not g.processes]
 
 
 def gen_dictionary(
