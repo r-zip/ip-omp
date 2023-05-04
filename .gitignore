@@ -1,6 +1,6 @@
 /.dir-locals.el
 .DS_Store
-/results/
+/results*/
 poetry.lock
 /figures/
 /notes.md
