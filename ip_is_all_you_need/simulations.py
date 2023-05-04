@@ -337,6 +337,8 @@ def aggregate_results(results_dir: Path) -> None:
     df = pl.concat(dfs, how="vertical")
     df.write_parquet(results_dir / "results.parquet")
 
+    torch.cuda.empty_cache()
+
 
 def main(
     results_dir: Path,
