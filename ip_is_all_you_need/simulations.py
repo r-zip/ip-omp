@@ -64,7 +64,7 @@ class Device(str, Enum):
 
 
 def get_gpus() -> list[int]:
-    gpus = [g for g in GPUStatCollection().new_query() if not g.processes]
+    gpus = [g for g in GPUStatCollection.new_query() if not g.processes]
     return [g.index for g in sorted(gpus, key=lambda x: x.utilization)]
 
 
