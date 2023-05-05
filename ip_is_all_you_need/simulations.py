@@ -18,7 +18,7 @@ from rich.logging import RichHandler
 from tqdm import tqdm
 
 from .algorithms import ip, omp
-from .constants import DEVICE, TRIALS
+from .constants import DEVICE
 from .metrics import iou, mse, mutual_coherence, precision, recall
 
 logging.basicConfig(
@@ -27,29 +27,21 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 # fmt: off
+TRIALS = 1_000
+
 SMALL_SETTINGS = {
     "dimensions": [
-        *[(m, 256) for m in range(4, 260, 4)],
+        *[(m, 256) for m in range(4, 220, 12)],
     ],
-    "sparsity": [
-        4,
-        12,
-        20,
-        28,
-        36,
-    ],
+    "sparsity": list(range(4, 42, 6)),
     "noise_std": [0.0],
 }
 
 LARGE_SETTINGS = {
     "dimensions": [
-        *[(m, 1024) for m in range(5, 805, 5)],
+        *[(m, 1024) for m in range(5, 305, 5)],
     ],
-    "sparsity": [
-        5,
-        10,
-        15,
-    ],
+    "sparsity": list(range(4, 18, 2)),
     "noise_std": [0.0],
 }
 # fmt: on
