@@ -405,6 +405,9 @@ def main(
                 output_dir=results_dir,
                 noise_std=noise_std,
                 device_type=device,
+                utilization=utilization,
+                memory_usage=memory_usage,
+                order_by=order_by,
             )
 
         if k < jobs:
