@@ -6,6 +6,7 @@ rich==13.3.4
 tqdm==4.65.0
 pandas==2.0.0
 joblib==1.2.0
+gpustat==0.6.0
 ftfy==6.1.1
 regex==2023.3.23
 clip @ git+https://github.com/openai/CLIP.git@a9b1bf5

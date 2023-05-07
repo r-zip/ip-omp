@@ -6,3 +6,4 @@ poetry.lock
 /notes.md
 __pycache__/
 /.venv/
+*.tar.gz
