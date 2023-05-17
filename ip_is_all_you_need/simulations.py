@@ -213,6 +213,7 @@ def run_experiment(
 ) -> None:
     torch.random.manual_seed(12345)
     torch.set_default_dtype(torch.float64)
+    torch.set_num_threads(4)
 
     if device_type == Device.cuda:
         while not (
@@ -433,4 +434,5 @@ def main(
 
 if __name__ == "__main__":
     torch.set_default_dtype(torch.float64)
+    torch.set_num_threads(4)
     typer.run(main)
