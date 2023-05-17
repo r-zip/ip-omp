@@ -212,6 +212,8 @@ def run_experiment(
     order_by: str,
 ) -> None:
     torch.random.manual_seed(12345)
+    torch.set_default_dtype(torch.float64)
+
     if device_type == Device.cuda:
         while not (
             gpus := get_gpus(
@@ -235,6 +237,9 @@ def run_experiment(
             f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
         )
         Phi = gen_dictionary(TRIALS, m, n, device=device)
+
+        torch.save(Phi, experiment_results_dir / "Phi.pt")
+
         y, x = generate_measurements_and_coeffs(
             Phi,
             s=s,
@@ -242,6 +247,9 @@ def run_experiment(
             device=device,
             coeff_distribution="sparse_gaussian",
         )
+
+        torch.save(y, experiment_results_dir / "y.pt")
+        torch.save(x, experiment_results_dir / "x.pt")
 
         true_support = get_true_support(x)
 
