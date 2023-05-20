@@ -36,6 +36,7 @@ class CoefficientDistribution(str, Enum):
 # fmt: off
 TRIALS = 1_000
 COEFFICIENT_DISTRIBUTION = CoefficientDistribution.sparse_constant
+NUM_THREADS = 10
 
 SMALL_SETTINGS = {
     "dimensions": [
@@ -229,7 +230,7 @@ def run_experiment(
 ) -> None:
     torch.random.manual_seed(12345)
     torch.set_default_dtype(torch.float64)
-    torch.set_num_threads(4)
+    torch.set_num_threads(NUM_THREADS)
 
     if device_type == Device.cuda:
         while not (
@@ -450,5 +451,5 @@ def main(
 
 if __name__ == "__main__":
     torch.set_default_dtype(torch.float64)
-    torch.set_num_threads(4)
+    torch.set_num_threads(NUM_THREADS)
     typer.run(main)
