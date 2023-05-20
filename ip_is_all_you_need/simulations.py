@@ -26,8 +26,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
+
+class CoefficientDistribution(str, Enum):
+    bernoulli_gaussian = "bernoulli_gaussian"
+    sparse_gaussian = "sparse_gaussian"
+    sparse_constant = "sparse_constant"
+
+
 # fmt: off
 TRIALS = 1_000
+COEFFICIENT_DISTRIBUTION = CoefficientDistribution.sparse_constant
 
 SMALL_SETTINGS = {
     "dimensions": [
@@ -98,16 +106,19 @@ def generate_measurements_and_coeffs(
     s: int,
     noise_std: float = 0.0,
     device: str | torch.device = DEVICE,
-    coeff_distribution: str = "sparse_gaussian",
+    coeff_distribution: CoefficientDistribution = CoefficientDistribution.sparse_gaussian,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, m, n = Phi.shape
     x = torch.zeros(batch_size, n, 1, device=device)
 
-    if coeff_distribution == "bernoulli_gaussian":
+    if coeff_distribution == CoefficientDistribution.bernoulli_gaussian:
         p = s / n
         supp = torch.rand(batch_size, n, 1, device=device) <= p
         x[supp] = torch.randn(int(supp.sum().item()), device=device)
-    elif coeff_distribution == "sparse_gaussian":
+    elif coeff_distribution in [
+        CoefficientDistribution.sparse_gaussian,
+        CoefficientDistribution.sparse_constant,
+    ]:
         bool_index = torch.hstack(
             [
                 torch.ones(s, device=device, dtype=torch.bool),
@@ -120,7 +131,12 @@ def generate_measurements_and_coeffs(
                 for _ in range(batch_size)
             ]
         )[:, :, None]
-        values = torch.randn(batch_size * s, device=device)
+        if coeff_distribution == CoefficientDistribution.sparse_gaussian:
+            values = torch.randn(batch_size * s, device=device)
+        elif coeff_distribution == CoefficientDistribution.sparse_constant:
+            values = torch.ones(batch_size * s, device=device)
+        else:
+            raise ValueError(f"coeff_distribution {coeff_distribution} not understood.")
         x[supp] = values
     else:
         raise ValueError(f"coeff_distribution {coeff_distribution} not understood.")
@@ -246,7 +262,7 @@ def run_experiment(
             s=s,
             noise_std=noise_std,
             device=device,
-            coeff_distribution="sparse_gaussian",
+            coeff_distribution=COEFFICIENT_DISTRIBUTION,
         )
 
         torch.save(y, experiment_results_dir / "y.pt")
