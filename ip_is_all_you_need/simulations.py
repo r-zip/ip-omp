@@ -248,7 +248,6 @@ def run_experiment(
         )
         Phi = gen_dictionary(TRIALS, m, n, device=device)
 
-        breakpoint()
         torch.save(Phi, experiment_results_dir / "Phi.pt")
 
         y, x = generate_measurements_and_coeffs(
