@@ -36,27 +36,20 @@ SMALL_SETTINGS = {
     "sparsity": list(range(4, 42, 6)),
     "noise_std": [0.0],
 }
-SMALL_EXPERIMENT_NUMBERS = []
 
-# LARGE_SETTINGS = {
-#     "dimensions": [
-#         *[(m, 1024) for m in range(5, 305, 5)],
-#     ],
-#     "sparsity": list(range(4, 18, 2)),
-#     "noise_std": [0.0],
-# }
-LARGE_EXPERIMENT_NUMBERS = [396, 397, 398, 399]
 LARGE_SETTINGS = {
     "dimensions": [
-        (285, 1024),
+        *[(m, 1024) for m in range(5, 305, 5)],
     ],
-    "sparsity": [4, 12, 14, 16],
+    "sparsity": list(range(4, 18, 2)),
     "noise_std": [0.0],
 }
 # fmt: on
 
 NUM_SETTINGS_SMALL = len(list(product(*list(SMALL_SETTINGS.values()))))
 NUM_SETTINGS_LARGE = len(list(product(*list(LARGE_SETTINGS.values()))))
+SMALL_EXPERIMENT_NUMBERS = list(range(NUM_SETTINGS_SMALL))
+LARGE_EXPERIMENT_NUMBERS = list(range(NUM_SETTINGS_LARGE))
 DTYPE = torch.float64
 
 
