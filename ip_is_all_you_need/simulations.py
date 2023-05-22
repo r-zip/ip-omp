@@ -26,17 +26,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
-
-class CoefficientDistribution(str, Enum):
-    bernoulli_gaussian = "bernoulli_gaussian"
-    sparse_gaussian = "sparse_gaussian"
-    sparse_constant = "sparse_constant"
-
-
 # fmt: off
 TRIALS = 1_000
-COEFFICIENT_DISTRIBUTION = CoefficientDistribution.sparse_constant
-NUM_THREADS = 10
 
 SMALL_SETTINGS = {
     "dimensions": [
@@ -45,12 +36,21 @@ SMALL_SETTINGS = {
     "sparsity": list(range(4, 42, 6)),
     "noise_std": [0.0],
 }
+SMALL_EXPERIMENT_NUMBERS = []
 
+# LARGE_SETTINGS = {
+#     "dimensions": [
+#         *[(m, 1024) for m in range(5, 305, 5)],
+#     ],
+#     "sparsity": list(range(4, 18, 2)),
+#     "noise_std": [0.0],
+# }
+LARGE_EXPERIMENT_NUMBERS = [396, 397, 398, 399]
 LARGE_SETTINGS = {
     "dimensions": [
-        *[(m, 1024) for m in range(5, 305, 5)],
+        (285, 1024),
     ],
-    "sparsity": list(range(4, 18, 2)),
+    "sparsity": [4, 12, 14, 16],
     "noise_std": [0.0],
 }
 # fmt: on
@@ -107,19 +107,16 @@ def generate_measurements_and_coeffs(
     s: int,
     noise_std: float = 0.0,
     device: str | torch.device = DEVICE,
-    coeff_distribution: CoefficientDistribution = CoefficientDistribution.sparse_gaussian,
+    coeff_distribution: str = "sparse_gaussian",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, m, n = Phi.shape
     x = torch.zeros(batch_size, n, 1, device=device)
 
-    if coeff_distribution == CoefficientDistribution.bernoulli_gaussian:
+    if coeff_distribution == "bernoulli_gaussian":
         p = s / n
         supp = torch.rand(batch_size, n, 1, device=device) <= p
         x[supp] = torch.randn(int(supp.sum().item()), device=device)
-    elif coeff_distribution in [
-        CoefficientDistribution.sparse_gaussian,
-        CoefficientDistribution.sparse_constant,
-    ]:
+    elif coeff_distribution == "sparse_gaussian":
         bool_index = torch.hstack(
             [
                 torch.ones(s, device=device, dtype=torch.bool),
@@ -132,12 +129,7 @@ def generate_measurements_and_coeffs(
                 for _ in range(batch_size)
             ]
         )[:, :, None]
-        if coeff_distribution == CoefficientDistribution.sparse_gaussian:
-            values = torch.randn(batch_size * s, device=device)
-        elif coeff_distribution == CoefficientDistribution.sparse_constant:
-            values = torch.ones(batch_size * s, device=device)
-        else:
-            raise ValueError(f"coeff_distribution {coeff_distribution} not understood.")
+        values = torch.randn(batch_size * s, device=device)
         x[supp] = values
     else:
         raise ValueError(f"coeff_distribution {coeff_distribution} not understood.")
@@ -230,7 +222,7 @@ def run_experiment(
 ) -> None:
     torch.random.manual_seed(12345)
     torch.set_default_dtype(torch.float64)
-    torch.set_num_threads(NUM_THREADS)
+    torch.set_num_threads(4)
 
     if device_type == Device.cuda:
         while not (
@@ -256,6 +248,7 @@ def run_experiment(
         )
         Phi = gen_dictionary(TRIALS, m, n, device=device)
 
+        breakpoint()
         torch.save(Phi, experiment_results_dir / "Phi.pt")
 
         y, x = generate_measurements_and_coeffs(
@@ -263,7 +256,7 @@ def run_experiment(
             s=s,
             noise_std=noise_std,
             device=device,
-            coeff_distribution=COEFFICIENT_DISTRIBUTION,
+            coeff_distribution="sparse_gaussian",
         )
 
         torch.save(y, experiment_results_dir / "y.pt")
@@ -378,9 +371,11 @@ def main(
     if setting == Setting.small:
         settings = SMALL_SETTINGS
         num_settings = NUM_SETTINGS_SMALL
+        experiment_numbers = SMALL_EXPERIMENT_NUMBERS
     else:
         settings = LARGE_SETTINGS
         num_settings = NUM_SETTINGS_LARGE
+        experiment_numbers = LARGE_EXPERIMENT_NUMBERS
 
     if device == Device.cuda:
         workers = min(
@@ -403,8 +398,9 @@ def main(
     pool = ProcessPoolExecutor(max_workers=workers)
 
     futures = []
-    for k, ((m, n), s, noise_std) in enumerate(
-        product(settings["dimensions"], settings["sparsity"], settings["noise_std"])
+    for k, ((m, n), s, noise_std) in zip(
+        experiment_numbers,
+        product(settings["dimensions"], settings["sparsity"], settings["noise_std"]),
     ):
         if jobs > 1:
             futures.append(
@@ -451,5 +447,5 @@ def main(
 
 if __name__ == "__main__":
     torch.set_default_dtype(torch.float64)
-    torch.set_num_threads(NUM_THREADS)
+    torch.set_num_threads(4)
     typer.run(main)

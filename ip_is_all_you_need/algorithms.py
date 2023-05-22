@@ -98,7 +98,6 @@ def ip_objective(
 def omp(
     Phi: torch.Tensor,
     y: torch.Tensor,
-    tol: float = 1e-12,
     num_iterations: int | None = None,
     device: str | torch.device = DEVICE,
 ) -> dict:
@@ -107,21 +106,12 @@ def omp(
         (-1, 1)
     )
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
-    k = 0
-    while k < Phi.shape[2]:
+    for k in range(num_iterations):
         logger.debug(f"OMP iteration {k} / {num_iterations}")
         P = projection(
             Phi[batches, :, columns].transpose(1, 2), perp=True, device=device
         )
         residual = P @ y
-
-        squared_error = residual.transpose(1, 2) @ residual
-        if (
-            (squared_error < tol).all()
-            or (k == Phi.shape[2] - 1)
-            or (k == num_iterations)
-        ):
-            break
 
         objective = torch.abs(Phi.transpose(1, 2) @ residual)
         log["objective"].append(objective.max(dim=1).values.ravel().tolist())
@@ -132,7 +122,6 @@ def omp(
         x_hat, y_hat = estimate_x_and_y(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
         log["y_hat"].append(y_hat)
-        k += 1
 
     return dict(log)
 
@@ -140,7 +129,6 @@ def omp(
 def ip(
     Phi: torch.Tensor,
     y: torch.Tensor,
-    tol: float = 1e-12,
     num_iterations: int | None = None,
     device: str | torch.device = DEVICE,
 ) -> dict:
@@ -149,21 +137,13 @@ def ip(
         (-1, 1)
     )
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
-    k = 0
-    while k < Phi.shape[2]:
+    for k in range(num_iterations):
         logger.debug(f"IP iteration {k} / {num_iterations}")
         objective = ip_objective(
             Phi, y, batches=batches, columns=columns, device=device
         )
         max_objective = objective.max(dim=1).values
         logger.debug(f"IP iteration {k}, max objective = {max_objective.max().item()}")
-
-        if (
-            (max_objective < tol).all()
-            or (k == Phi.shape[2] - 1)
-            or k == num_iterations
-        ):
-            break
 
         log["objective"].append(max_objective.ravel().tolist())
 
@@ -174,6 +154,5 @@ def ip(
         x_hat, y_hat = estimate_x_and_y(Phi, y, columns, device=device)
         log["x_hat"].append(x_hat)
         log["y_hat"].append(y_hat)
-        k += 1
 
     return dict(log)
