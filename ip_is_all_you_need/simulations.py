@@ -71,6 +71,12 @@ class OrderBy(str, Enum):
         return self.value
 
 
+class CoeffDistribution(str, Enum):
+    sparse_gaussian = "sparse_gaussian"
+    sparse_const = "sparse_const"
+    bernoulli_gaussian = "bernoulli_gaussian"
+
+
 def get_gpus(
     utilization: float = 0.25,
     memory_usage: float = 0.25,
@@ -100,16 +106,21 @@ def generate_measurements_and_coeffs(
     s: int,
     noise_std: float = 0.0,
     device: str | torch.device = DEVICE,
-    coeff_distribution: str = "sparse_gaussian",
+    coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_const,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    err_msg = f"coeff_distribution {coeff_distribution} not understood."
+
     batch_size, m, n = Phi.shape
     x = torch.zeros(batch_size, n, 1, device=device)
 
-    if coeff_distribution == "bernoulli_gaussian":
+    if coeff_distribution == CoeffDistribution.bernoulli_gaussian:
         p = s / n
         supp = torch.rand(batch_size, n, 1, device=device) <= p
         x[supp] = torch.randn(int(supp.sum().item()), device=device)
-    elif coeff_distribution == "sparse_gaussian":
+    elif coeff_distribution in [
+        CoeffDistribution.sparse_const,
+        CoeffDistribution.sparse_gaussian,
+    ]:
         bool_index = torch.hstack(
             [
                 torch.ones(s, device=device, dtype=torch.bool),
@@ -122,10 +133,15 @@ def generate_measurements_and_coeffs(
                 for _ in range(batch_size)
             ]
         )[:, :, None]
-        values = torch.randn(batch_size * s, device=device)
+        if coeff_distribution == CoeffDistribution.sparse_gaussian:
+            values = torch.randn(batch_size * s, device=device)
+        elif coeff_distribution == CoeffDistribution.sparse_const:
+            values = torch.ones(batch_size * s, device=device)
+        else:
+            raise ValueError(err_msg)
         x[supp] = values
     else:
-        raise ValueError(f"coeff_distribution {coeff_distribution} not understood.")
+        raise ValueError(err_msg)
 
     return (Phi @ x + noise_std * torch.randn(batch_size, m, 1, device=device)), x
 
@@ -212,6 +228,7 @@ def run_experiment(
     utilization: float,
     memory_usage: float,
     order_by: str,
+    coeff_distribution: CoeffDistribution,
 ) -> None:
     torch.random.manual_seed(12345)
     torch.set_default_dtype(torch.float64)
@@ -248,7 +265,7 @@ def run_experiment(
             s=s,
             noise_std=noise_std,
             device=device,
-            coeff_distribution="sparse_gaussian",
+            coeff_distribution=coeff_distribution,
         )
 
         torch.save(y, experiment_results_dir / "y.pt")
@@ -353,6 +370,7 @@ def main(
     memory_usage: float = typer.Option(default=0.75, min=0.0, max=1.0),
     utilization: float = typer.Option(default=0.75, min=0.0, max=1.0),
     order_by: OrderBy = OrderBy.utilization,
+    coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
 ):
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
@@ -408,6 +426,7 @@ def main(
                     utilization=utilization,
                     memory_usage=memory_usage,
                     order_by=order_by,
+                    coeff_distribution=coeff_distribution,
                 )
             )
         else:
