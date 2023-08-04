@@ -34,7 +34,7 @@ SMALL_SETTINGS = {
         *[(m, 256) for m in range(4, 300, 12)],
     ],
     "sparsity": list(range(4, 42, 6)),
-    "noise_std": [1e-4],
+    "noise_std": [1e-4, 1e-3, 1e-2, 1e-1],
 }
 
 LARGE_SETTINGS = {
@@ -42,7 +42,7 @@ LARGE_SETTINGS = {
         *[(m, 1024) for m in range(5, 305, 5)],
     ],
     "sparsity": list(range(4, 18, 2)),
-    "noise_std": [1e-4],
+    "noise_std": [1e-4, 1e-3, 1e-2, 1e-1],
 }
 # fmt: on
 
