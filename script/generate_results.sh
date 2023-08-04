@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SUFFIX='noise_test'
+SUFFIX='noise'
 JOBS=4
 
 python -m ip_is_all_you_need.simulations \
