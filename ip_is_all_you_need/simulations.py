@@ -9,6 +9,7 @@ from operator import attrgetter
 from pathlib import Path
 from time import sleep
 
+import numpy as np
 import polars as pl
 import torch
 import torch.multiprocessing as mp
@@ -20,6 +21,7 @@ from tqdm import tqdm
 from .algorithms import ip, omp
 from .constants import DEVICE
 from .metrics import iou, mse, mutual_coherence, precision, recall
+from .util import db_to_ratio
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -34,7 +36,7 @@ SMALL_SETTINGS = {
         *[(m, 256) for m in range(4, 300, 12)],
     ],
     "sparsity": list(range(4, 42, 6)),
-    "noise_std": [1e-4, 1e-3, 1e-2, 1e-1],
+    "snr": [5, 10, 15, 20],
 }
 
 LARGE_SETTINGS = {
@@ -42,7 +44,7 @@ LARGE_SETTINGS = {
         *[(m, 1024) for m in range(5, 305, 5)],
     ],
     "sparsity": list(range(4, 18, 2)),
-    "noise_std": [1e-4, 1e-3, 1e-2, 1e-1],
+    "snr": [5, 10, 15, 20],
 }
 # fmt: on
 
@@ -104,14 +106,29 @@ def gen_dictionary(
 def generate_measurements_and_coeffs(
     Phi: torch.Tensor,
     s: int,
-    noise_std: float = 0.0,
+    snr: float,
     device: str | torch.device = DEVICE,
     coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_const,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Generate coefficients x and measurements y = Phi @ x + noise.
+
+    Args:
+        Phi: dictionaries
+        s: sparsity level
+        snr: signal-to-noise ratio (dB)
+        device: torch device
+        coeff_distribution: distribution of the coefficients x
+
+    Returns:
+        noisy measurements, coefficients
+    """
     err_msg = f"coeff_distribution {coeff_distribution} not understood."
 
     batch_size, m, n = Phi.shape
     x = torch.zeros(batch_size, n, 1, device=device)
+    snr_ratio = db_to_ratio(snr, square=True)
+    noise_std = np.sqrt(s / (snr_ratio * (m - 2)))
 
     if coeff_distribution == CoeffDistribution.bernoulli_gaussian:
         p = s / n
@@ -222,7 +239,7 @@ def run_experiment(
     m: int,
     n: int,
     s: int,
-    noise_std: float,
+    snr: float,
     output_dir: Path,
     device_type: Device,
     utilization: float,
@@ -263,7 +280,7 @@ def run_experiment(
         y, x = generate_measurements_and_coeffs(
             Phi,
             s=s,
-            noise_std=noise_std,
+            snr=snr,
             device=device,
             coeff_distribution=coeff_distribution,
         )
@@ -316,7 +333,7 @@ def run_experiment(
                     pl.lit(n).alias("n"),
                     pl.lit(m / n).alias("measurement_rate"),
                     pl.lit(s).alias("sparsity"),
-                    pl.lit(noise_std).alias("noise_std"),
+                    pl.lit(snr).alias("snr"),
                     pl.lit(str(output_dir)).alias("output_dir"),
                 ]
             )
@@ -338,7 +355,7 @@ def aggregate_results(results_dir: Path) -> None:
                     "n",
                     "measurement_rate",
                     "sparsity",
-                    "noise_std",
+                    "snr",
                     "output_dir",
                     "trial",
                     "nnz",
@@ -408,10 +425,11 @@ def main(
     pool = ProcessPoolExecutor(max_workers=workers)
 
     futures = []
-    for k, ((m, n), s, noise_std) in zip(
+    for k, ((m, n), s, snr) in zip(
         experiment_numbers,
-        product(settings["dimensions"], settings["sparsity"], settings["noise_std"]),
+        product(settings["dimensions"], settings["sparsity"], settings["snr"]),
     ):
+        # TODO: clean up by specifying args, kwargs in one place
         if jobs > 1:
             futures.append(
                 pool.submit(
@@ -421,7 +439,7 @@ def main(
                     n,
                     s,
                     output_dir=results_dir,
-                    noise_std=noise_std,
+                    snr=snr,
                     device_type=device,
                     utilization=utilization,
                     memory_usage=memory_usage,
@@ -436,11 +454,12 @@ def main(
                 n,
                 s,
                 output_dir=results_dir,
-                noise_std=noise_std,
+                snr=snr,
                 device_type=device,
                 utilization=utilization,
                 memory_usage=memory_usage,
                 order_by=order_by,
+                coeff_distribution=coeff_distribution,
             )
 
         if k < jobs:
