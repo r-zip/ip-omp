@@ -8,7 +8,7 @@ do
         --snr=$snr \
         --metric=nmse_x_mean \
         --semilogy \
-        all_results_snr/small.parquet \
-        all_results_snr/large.parquet \
+        rebuttal_final/small.parquet \
+        rebuttal_final/large.parquet \
         "results_snr_${snr}"
 done
