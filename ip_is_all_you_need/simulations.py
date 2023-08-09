@@ -41,7 +41,7 @@ SMALL_SETTINGS = {
 
 LARGE_SETTINGS = {
     "dimensions": [
-        *[(m, 1024) for m in range(5, 305, 5)],
+        *[(m, 1024) for m in range(5, 125, 5)],
     ],
     "sparsity": list(range(4, 18, 2)),
     "snr": [5, 10, 15, 20],
