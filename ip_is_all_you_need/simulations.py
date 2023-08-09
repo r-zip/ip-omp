@@ -247,7 +247,7 @@ def run_experiment(
     order_by: str,
     coeff_distribution: CoeffDistribution,
 ) -> None:
-    torch.random.manual_seed(12345)
+    torch.random.manual_seed(experiment_number)
     torch.set_default_dtype(torch.float64)
     torch.set_num_threads(4)
 

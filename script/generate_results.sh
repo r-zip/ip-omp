@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SUFFIX='snr'
+SUFFIX='snr2'
 JOBS=8
 
 python -m ip_is_all_you_need.simulations \
