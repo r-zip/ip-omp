@@ -8,3 +8,8 @@ __pycache__/
 /.venv/
 *.tar.gz
 /.vscode/
+*.pt
+*.parquet
+*.png
+*.xlsx
+*.eps

@@ -16,6 +16,13 @@ c = pl.col
 sns.set()
 sns.set_context("talk")
 
+SUCCESS_THRESHOLD = 1e-3
+METRIC_NAME_LOOKUP = {
+    "nmse_x_mean": "Mean NMSE",
+    "nmse_x_median": "Median NMSE",
+    "success_rate": "Probability of recovery",
+}
+
 
 def filter_df(
     df: pl.DataFrame, algorithm: Literal["ip", "omp", None] = None
@@ -56,9 +63,10 @@ def get_phase_transition_data(
     df_pt = (
         # filter to only the last iteration
         filter_df(df, algorithm=algorithm)
+        .with_columns((c("n") * c("mse_x") / c("norm_x") ** 2).alias("nmse"))
         # define success as relative reconstruction error < eps
         .with_columns(
-            (c("mse_x") / (c("norm_x") ** 2) < 1e-14).alias("success"),
+            (c("nmse") < SUCCESS_THRESHOLD).alias("success"),
         )
         # for each experiment
         .groupby("experiment_number")
@@ -68,19 +76,20 @@ def get_phase_transition_data(
             c("n").first(),
             c("measurement_rate").first(),
             c("sparsity").first(),
-            c("noise_std").first(),
+            c("snr").first(),
             c("iou").mean(),
             c("iou").quantile(0.05).alias("iou_lo"),
             c("iou").quantile(0.95).alias("iou_hi"),
             c("success").mean().alias("success_rate"),
-            (c("mse_x") / c("norm_x") ** 2).mean().alias("mse_x_mean"),
-            (c("mse_x") / c("norm_x") ** 2).median().alias("mse_x_median"),
-            (c("mse_x") / c("norm_x") ** 2).quantile(0.05).alias("mse_x_05p"),
-            (c("mse_x") / c("norm_x") ** 2).quantile(0.95).alias("mse_x_95p"),
-            (c("mse_x") / c("norm_x") ** 2).quantile(0.25).alias("mse_x_25p"),
-            (c("mse_x") / c("norm_x") ** 2).quantile(0.75).alias("mse_x_75p"),
-            (c("mse_x") / c("norm_x") ** 2).std().alias("mse_x_std"),
-        ).with_columns(
+            c("nmse").mean().alias("nmse_x_mean"),
+            c("nmse").median().alias("nmse_x_median"),
+            c("nmse").quantile(0.05).alias("nmse_x_05p"),
+            c("nmse").quantile(0.95).alias("nmse_x_95p"),
+            c("nmse").quantile(0.25).alias("nmse_x_25p"),
+            c("nmse").quantile(0.75).alias("nmse_x_75p"),
+            c("nmse").std().alias("nmse_x_std"),
+        )
+        .with_columns(
             (c("m") / c("n")).alias("measurement_rate"),
             (c("sparsity") / c("m")).alias("sparsity_rate"),
         )
@@ -143,8 +152,12 @@ def plot_probability_curve(df: pl.DataFrame, save_file: Path | None = None) -> N
         plt.savefig(save_file, bbox_inches="tight")
 
 
-def plot_probability_curves(
-    df_small: pl.DataFrame, df_large: pl.DataFrame, save_file: Path | None = None
+def plot_metric_curves(
+    df_small: pl.DataFrame,
+    df_large: pl.DataFrame,
+    save_file: Path | None = None,
+    metric: str = "success_rate",
+    semilogy: bool = False,
 ) -> None:
     _, axs = plt.subplots(1, 2, figsize=(13.0, 4.8), sharey=True)
     for k, df in enumerate([df_small, df_large]):
@@ -159,18 +172,20 @@ def plot_probability_curves(
             labels.append(f"$s$={s}")
             df_pt_at_s_omp = df_pt_omp.filter(c("sparsity") == s).sort("m")
             df_pt_at_s_ip = df_pt_ip.filter(c("sparsity") == s).sort("m")
-            cur_lines = ax.plot(df_pt_at_s_omp["m"], df_pt_at_s_omp["success_rate"])
+            cur_lines = ax.plot(df_pt_at_s_omp["m"], df_pt_at_s_omp[metric])
             lines.append(cur_lines[0])
             cur_lines = ax.plot(
                 df_pt_at_s_ip["m"],
-                df_pt_at_s_ip["success_rate"],
+                df_pt_at_s_ip[metric],
                 "o",
                 fillstyle="none",
                 color=cur_lines[0].get_color(),
             )
             ax.set_xlabel("Number of measurements $m$")
             if k == 0:
-                ax.set_ylabel("Probability of exact recovery")
+                ax.set_ylabel(METRIC_NAME_LOOKUP.get(metric, metric))
+            if semilogy:
+                plt.yscale("log")
             ax.set_title(f"Number of dictionary atoms $n$={n}")
             ax.grid("on")
 
@@ -191,18 +206,27 @@ def main(
     max_m_small: int | None = None,
     max_m_large: int | None = None,
     together: bool = False,
+    snr: float | None = None,
+    metric: str = "success_rate",
+    semilogy: bool = False,
 ) -> None:
     df_small = pl.read_parquet(small_result_path)
     df_large = pl.read_parquet(large_result_path)
 
-    if max_m_small:
+    if max_m_small is not None:
         df_small = df_small.filter(pl.col("m") <= max_m_small)
 
-    if max_m_large:
+    if max_m_large is not None:
         df_large = df_large.filter(pl.col("m") <= max_m_large)
 
+    if snr is not None:
+        df_small = df_small.filter(pl.col("snr") == snr)
+        df_large = df_large.filter(pl.col("snr") == snr)
+
     if together:
-        plot_probability_curves(df_small, df_large, save_file=save_file)
+        plot_metric_curves(
+            df_small, df_large, save_file=save_file, metric=metric, semilogy=semilogy
+        )
     else:
         plot_probability_curve(
             df_small,
