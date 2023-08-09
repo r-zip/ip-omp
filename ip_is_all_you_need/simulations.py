@@ -33,7 +33,7 @@ TRIALS = 1_000
 
 SMALL_SETTINGS = {
     "dimensions": [
-        *[(m, 256) for m in range(4, 300, 12)],
+        *[(m, 256) for m in range(4, 232, 12)],
     ],
     "sparsity": list(range(4, 42, 6)),
     "snr": [5, 10, 15, 20],
