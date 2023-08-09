@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SUFFIX='snr'
-JOBS=4
+JOBS=8
 
 python -m ip_is_all_you_need.simulations \
     --setting=small \
