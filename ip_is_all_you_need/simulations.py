@@ -127,8 +127,13 @@ def generate_measurements_and_coeffs(
 
     batch_size, m, n = Phi.shape
     x = torch.zeros(batch_size, n, 1, device=device)
-    snr_ratio = db_to_ratio(snr, square=True)
-    noise_std = np.sqrt(s / (snr_ratio * (m - 2)))
+
+    if np.isinf(snr):
+        # noiseless case
+        noise_std = 0
+    else:
+        snr_ratio = db_to_ratio(snr, square=True)
+        noise_std = np.sqrt(s / (snr_ratio * (m - 2)))
 
     if coeff_distribution == CoeffDistribution.bernoulli_gaussian:
         p = s / n
