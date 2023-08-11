@@ -82,7 +82,7 @@ class CoeffDistribution(str, Enum):
 def get_gpus(
     utilization: float = 0.25,
     memory_usage: float = 0.25,
-    order_by: OrderBy = "utilization",
+    order_by: OrderBy = OrderBy.utilization,
 ) -> list[int]:
     gpus = GPUStatCollection.new_query()
     free_gpus = [
@@ -473,7 +473,7 @@ def main(
     for f in tqdm(as_completed(futures), total=len(futures)):
         if e := f.exception():
             logger.exception(e)
-            traceback.print_exc(e)
+            traceback.print_exc()
 
     aggregate_results(results_dir)
 

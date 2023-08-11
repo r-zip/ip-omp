@@ -3,11 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import polars as pl
 
-from ip_is_all_you_need.figures import (
-    METRIC_NAME_LOOKUP,
-    get_phase_transition_data,
-    plot_metric_curve,
-)
+from ip_is_all_you_need.figures import METRIC_NAME_LOOKUP, get_phase_transition_data
 
 c = pl.col
 
@@ -41,7 +37,7 @@ def plot_single(
         ax.set_xlabel("Measurements $m$")
         if ylabel:
             ax.set_ylabel(METRIC_NAME_LOOKUP.get(metric, metric))
-        ax.set_title(f"Dictionary atoms $n$={n}, SNR={snr} dB")
+        ax.set_title(f"Dictionary atoms $n$={n}, E[SNR]={snr} dB")
         if semilogy:
             ax.set_yscale("log")
         ax.grid("on")
@@ -68,7 +64,7 @@ def plot_metric_curves(
     n_small = df_small["n"][0]
     n_large = df_large["n"][0]
 
-    fig, ax = plt.subplots(2, 4, sharey=sharey, figsize=(16, 6))
+    fig, ax = plt.subplots(2, 4, sharey=sharey, figsize=(16, 8))
     for k, snr in enumerate([5, 10, 15, 20]):
         plot_single(
             ax[0, k],
