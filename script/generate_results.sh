@@ -2,27 +2,29 @@
 
 SUFFIX='no_seed_change_stable'
 JOBS=8
+MACHINE='io51'
+OUTPUT_DIR="/export/${MACHINE}/data/rpilgri1"
 
 python -m ip_is_all_you_need.simulations \
     --setting=small \
     --jobs=$JOBS \
     --coeff-distribution=sparse_gaussian \
-    "results_small_${SUFFIX}"
+    "${OUTPUT_DIR}/results_small_${SUFFIX}"
 
 python -m ip_is_all_you_need.simulations \
     --setting=large \
     --jobs=$JOBS \
     --coeff-distribution=sparse_gaussian \
-    "results_large_${SUFFIX}"
+    "${OUTPUT_DIR}/results_large_${SUFFIX}"
 
 python -m ip_is_all_you_need.simulations \
     --setting=small \
     --jobs=$JOBS \
     --coeff-distribution=sparse_const \
-    "results_small_${SUFFIX}_const"
+    "${OUTPUT_DIR}/results_small_${SUFFIX}_const"
 
 python -m ip_is_all_you_need.simulations \
     --setting=large \
     --jobs=$JOBS \
     --coeff-distribution=sparse_const \
-    "results_large_${SUFFIX}_const"
+    "${OUTPUT_DIR}/results_large_${SUFFIX}_const"
