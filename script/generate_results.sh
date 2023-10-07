@@ -3,7 +3,8 @@
 SUFFIX='no_seed_change_stable'
 JOBS=8
 MACHINE='io52'
-OUTPUT_DIR="/export/${MACHINE}/data/rpilgri1"
+# OUTPUT_DIR="/export/${MACHINE}/data/rpilgri1"
+OUTPUT_DIR="./"
 
 python -m ip_is_all_you_need.simulations \
     --setting=small \
