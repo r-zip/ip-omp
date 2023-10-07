@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SUFFIX='no_seed_change_stable'
-JOBS=16
+JOBS=8
 
 python -m ip_is_all_you_need.simulations \
     --setting=small \
