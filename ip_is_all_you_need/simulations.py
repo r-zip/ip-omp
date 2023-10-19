@@ -354,7 +354,8 @@ def aggregate_results(results_dir: Path) -> None:
     for path in results_dir.iterdir():
         if path.is_dir() and (f := (path / "results.parquet")).exists():
             dfs.append(
-                pl.read_parquet(f).select(
+                pl.read_parquet(f)
+                .select(
                     "experiment_number",
                     "m",
                     "n",
@@ -374,6 +375,11 @@ def aggregate_results(results_dir: Path) -> None:
                     "precision",
                     "mse_x",
                     "mse_y",
+                )
+                .cast(
+                    {
+                        "snr": float,
+                    }
                 )
             )
 
