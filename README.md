@@ -1,4 +1,4 @@
-# Information Pursuit Is All You Need
+# IP-OMP
 
 ## Setup
 
