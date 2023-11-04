@@ -2,7 +2,7 @@
 
 for snr in 5 10 15 20
 do
-    python -m ip_is_all_you_need.figures \
+    python -m ip_omp.figures \
         --max-m-large=120 \
         --together \
         --snr=$snr \
