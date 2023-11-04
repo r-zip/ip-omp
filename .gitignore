@@ -1,6 +1,5 @@
 /.dir-locals.el
 .DS_Store
-/results*/
 poetry.lock
 /figures/
 /notes.md
@@ -14,3 +13,4 @@ __pycache__/
 *.xlsx
 *.eps
 .ipynb_checkpoints/
+/results/
