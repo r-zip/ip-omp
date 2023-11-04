@@ -2,7 +2,7 @@ from pathlib import Path
 
 import typer
 
-from ip_is_all_you_need.simulations import aggregate_results
+from ip_omp.simulations import aggregate_results
 
 
 def main(results_path: Path) -> None:

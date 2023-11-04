@@ -3,19 +3,9 @@ from math import sqrt
 import pytest
 import torch
 
-from ip_is_all_you_need.algorithms import (
-    estimate_x,
-    estimate_y,
-    ip,
-    ip_objective,
-    omp,
-    projection,
-)
-from ip_is_all_you_need.metrics import mutual_coherence
-from ip_is_all_you_need.simulations import (
-    gen_dictionary,
-    generate_measurements_and_coeffs,
-)
+from ip_omp.algorithms import estimate_x, estimate_y, ip, ip_objective, omp, projection
+from ip_omp.metrics import mutual_coherence
+from ip_omp.simulations import gen_dictionary, generate_measurements_and_coeffs
 
 
 @pytest.fixture
