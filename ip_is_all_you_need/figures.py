@@ -16,11 +16,11 @@ c = pl.col
 sns.set()
 sns.set_context("talk")
 
-SUCCESS_THRESHOLD = 1e-3
+SUCCESS_THRESHOLD = 1e-14
 METRIC_NAME_LOOKUP = {
     "nmse_x_mean": "Mean NMSE",
     "nmse_x_median": "Median NMSE",
-    "success_rate": "Probability of recovery",
+    "success_rate": "Probability of exact recovery",
 }
 
 
