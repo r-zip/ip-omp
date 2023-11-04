@@ -2,7 +2,6 @@ import logging
 import traceback
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from enum import Enum
 from itertools import product
 from multiprocessing import cpu_count
 from operator import attrgetter
@@ -19,7 +18,7 @@ from rich.logging import RichHandler
 from tqdm import tqdm
 
 from .algorithms import ip, omp
-from .constants import DEVICE
+from .constants import DEVICE, CoeffDistribution, Device, OrderBy, Setting
 from .metrics import iou, mse, mutual_coherence, precision, recall
 from .util import db_to_ratio
 
@@ -53,30 +52,6 @@ NUM_SETTINGS_LARGE = len(list(product(*list(LARGE_SETTINGS.values()))))
 SMALL_EXPERIMENT_NUMBERS = list(range(NUM_SETTINGS_SMALL))
 LARGE_EXPERIMENT_NUMBERS = list(range(NUM_SETTINGS_LARGE))
 DTYPE = torch.float64
-
-
-class Device(str, Enum):
-    cuda = "cuda"
-    cpu = "cpu"
-
-
-class Setting(str, Enum):
-    small = "small"
-    large = "large"
-
-
-class OrderBy(str, Enum):
-    utilization = "utilization"
-    memory_usage = "memory_usage"
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class CoeffDistribution(str, Enum):
-    sparse_gaussian = "sparse_gaussian"
-    sparse_const = "sparse_const"
-    bernoulli_gaussian = "bernoulli_gaussian"
 
 
 def get_gpus(
@@ -135,35 +110,25 @@ def generate_measurements_and_coeffs(
         snr_ratio = db_to_ratio(snr, square=True)
         noise_std = np.sqrt(s / (snr_ratio * (m - 2)))
 
-    if coeff_distribution == CoeffDistribution.bernoulli_gaussian:
-        p = s / n
-        supp = torch.rand(batch_size, n, 1, device=device) <= p
-        x[supp] = torch.randn(int(supp.sum().item()), device=device)
-    elif coeff_distribution in [
-        CoeffDistribution.sparse_const,
-        CoeffDistribution.sparse_gaussian,
-    ]:
-        bool_index = torch.hstack(
-            [
-                torch.ones(s, device=device, dtype=torch.bool),
-                torch.zeros(n - s, device=device, dtype=torch.bool),
-            ]
-        )
-        supp = torch.vstack(
-            [
-                bool_index[torch.randperm(n, device=device)].clone()
-                for _ in range(batch_size)
-            ]
-        )[:, :, None]
-        if coeff_distribution == CoeffDistribution.sparse_gaussian:
-            values = torch.randn(batch_size * s, device=device)
-        elif coeff_distribution == CoeffDistribution.sparse_const:
-            values = torch.ones(batch_size * s, device=device)
-        else:
-            raise ValueError(err_msg)
-        x[supp] = values
+    bool_index = torch.hstack(
+        [
+            torch.ones(s, device=device, dtype=torch.bool),
+            torch.zeros(n - s, device=device, dtype=torch.bool),
+        ]
+    )
+    supp = torch.vstack(
+        [
+            bool_index[torch.randperm(n, device=device)].clone()
+            for _ in range(batch_size)
+        ]
+    )[:, :, None]
+    if coeff_distribution == CoeffDistribution.sparse_gaussian:
+        values = torch.randn(batch_size * s, device=device)
+    elif coeff_distribution == CoeffDistribution.sparse_const:
+        values = torch.ones(batch_size * s, device=device)
     else:
         raise ValueError(err_msg)
+    x[supp] = values
 
     return (Phi @ x + noise_std * torch.randn(batch_size, m, 1, device=device)), x
 
@@ -440,7 +405,7 @@ def main(
         experiment_numbers,
         product(settings["dimensions"], settings["sparsity"], settings["snr"]),
     ):
-        # TODO: clean up by specifying args, kwargs in one place
+        # might dedupe this by specifying args, kwargs in one place
         if jobs > 1:
             futures.append(
                 pool.submit(
