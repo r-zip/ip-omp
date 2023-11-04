@@ -1,13 +1,7 @@
-# IP-OMP
+# Information Maximization Perspective of Orthogonal Matching Pursuit with Applications to Explainable AI
+
+Code to accompany the [NeurIPS paper](https://openreview.net/forum?id=CAF4CnUblx).
 
 ## Setup
 
-Install [poetry](https://python-poetry.org), then run
-```bash
-poetry install
-```
-
-To run experiments, use the command
-```bash
-poetry run python path/to/script.py
-```
+Coming soon.
