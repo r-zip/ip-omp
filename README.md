@@ -34,25 +34,58 @@ $ python -m ip_omp.simulations --help
  Usage: python -m ip_omp.simulations [OPTIONS] RESULTS_DIR
 
 ╭─ Arguments ──────────────────────────────────────────────────────────────────╮
-│ *    results_dir      PATH  [default: None] [required]                       │
+│ *    results_dir      PATH  Where to save the results. [default: None]       │
+│                             [required]                                       │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
-│ --problem-size                          [small|large]      [default: small]  │
-│ --coeff-distribut…                      [sparse_gaussian|  [default:         │
-│                                         sparse_const]      sparse_gaussian]  │
-│ --noise-setting                         [noiseless|noisy]  [default:         │
+│ --problem-size                          [small|large]      The size of the   │
+│                                                            problem n=256     │
+│                                                            (small) or n=1024 │
+│                                                            (large).          │
+│                                                            [default: small]  │
+│ --coeff-distribut…                      [sparse_gaussian|  The distribution  │
+│                                         sparse_const]      of the            │
+│                                                            coefficients of   │
+│                                                            the sparse code.  │
+│                                                            [default:         │
+│                                                            sparse_gaussian]  │
+│ --noise-setting                         [noiseless|noisy]  The noise setting │
+│                                                            of the            │
+│                                                            experiment.       │
+│                                                            [default:         │
 │                                                            noiseless]        │
-│ --overwrite           --no-overwrite                       [default:         │
+│ --overwrite           --no-overwrite                       Whether to        │
+│                                                            overwrite         │
+│                                                            existing results. │
+│                                                            [default:         │
 │                                                            no-overwrite]     │
-│ --jobs                                  INTEGER RANGE      [default: 1]      │
-│                                         [x>=1]                               │
-│ --device                                [cuda|cpu]         [default: cpu]    │
-│ --memory-usage                          FLOAT RANGE        [default: 0.75]   │
-│                                         [0.0<=x<=1.0]                        │
-│ --utilization                           FLOAT RANGE        [default: 0.75]   │
-│                                         [0.0<=x<=1.0]                        │
-│ --order-by                              [utilization|memo  [default:         │
-│                                         ry_usage]          utilization]      │
+│ --jobs                                  INTEGER RANGE      Maximum number of │
+│                                         [x>=1]             subprocesses to   │
+│                                                            run.              │
+│                                                            [default: 1]      │
+│ --device                                [cuda|cpu]         Device to use     │
+│                                                            (CPU/GPU).        │
+│                                                            [default: cpu]    │
+│ --memory-usage                          FLOAT RANGE        Memory usage      │
+│                                         [0.0<=x<=1.0]      below which a GPU │
+│                                                            will be           │
+│                                                            considered free   │
+│                                                            when launching    │
+│                                                            new subprocesses. │
+│                                                            [default: 0.75]   │
+│ --utilization                           FLOAT RANGE        Utilization below │
+│                                         [0.0<=x<=1.0]      which a GPU will  │
+│                                                            be considered     │
+│                                                            free when         │
+│                                                            launching new     │
+│                                                            subprocesses.     │
+│                                                            [default: 0.75]   │
+│ --order-by                              [utilization|memo  How to sort       │
+│                                         ry_usage]          available GPUs    │
+│                                                            when launching    │
+│                                                            subprocesses.     │
+│                                                            [default:         │
+│                                                            utilization]      │
 │ --help                                                     Show this message │
 │                                                            and exit.         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -65,16 +98,35 @@ $ python -m ip_omp.figures plot-noiseless --help
  Usage: python -m ip_omp.figures plot-noiseless [OPTIONS] SMALL_RESULT_PATH
                                                 LARGE_RESULT_PATH
 
+ Plot the results of the noiseless sparse recovery experiments.
+
 ╭─ Arguments ──────────────────────────────────────────────────────────────────╮
-│ *    small_result_path      PATH  [default: None] [required]                 │
-│ *    large_result_path      PATH  [default: None] [required]                 │
+│ *    small_result_path      PATH  Path to the small (n=256) results file.    │
+│                                   [default: None]                            │
+│                                   [required]                                 │
+│ *    large_result_path      PATH  Path to the large (n=1024) results file.   │
+│                                   [default: None]                            │
+│                                   [required]                                 │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
-│ --coeff-distribut…                     [sparse_gaussian|  [default:          │
-│                                        sparse_const]      sparse_gaussian]   │
-│ --save-dir                             PATH               [default: .]       │
-│ --save-file-format                     [eps|png]          [default: png]     │
-│ --together            --no-together                       [default:          │
+│ --coeff-distribut…                     [sparse_gaussian|  The distribution   │
+│                                        sparse_const]      of the             │
+│                                                           coefficients of    │
+│                                                           the sparse code.   │
+│                                                           [default:          │
+│                                                           sparse_gaussian]   │
+│ --save-dir                             PATH               Where to save      │
+│                                                           resulting plots.   │
+│                                                           [default: .]       │
+│ --save-file-format                     [eps|png]          Format of the plot │
+│                                                           file.              │
+│                                                           [default: png]     │
+│ --together            --no-together                       Whether to plot    │
+│                                                           small (n=256) and  │
+│                                                           large (n=1024)     │
+│                                                           results in the     │
+│                                                           same figure.       │
+│                                                           [default:          │
 │                                                           no-together]       │
 │ --help                                                    Show this message  │
 │                                                           and exit.          │
@@ -87,13 +139,20 @@ $ python -m ip_omp.figures plot-noisy --help
  Usage: python -m ip_omp.figures plot-noisy [OPTIONS] SMALL_RESULT_PATH
                                             LARGE_RESULT_PATH
 
+ Plot the results of the noisy sparse recovery experiments.
+
 ╭─ Arguments ──────────────────────────────────────────────────────────────────╮
-│ *    small_result_path      PATH  [default: None] [required]                 │
-│ *    large_result_path      PATH  [default: None] [required]                 │
+│ *    small_result_path      PATH  Path to the small (n=256) results file.    │
+│                                   [default: None]                            │
+│                                   [required]                                 │
+│ *    large_result_path      PATH  Path to the large (n=1024) results file.   │
+│                                   [default: None]                            │
+│                                   [required]                                 │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
-│ --save-dir                PATH       [default: .]                            │
-│ --save-file-format        [eps|png]  [default: png]                          │
+│ --save-dir                PATH       Where to save resulting plots.          │
+│                                      [default: .]                            │
+│ --save-file-format        [eps|png]  Format of the plot file. [default: png] │
 │ --help                               Show this message and exit.             │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
