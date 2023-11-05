@@ -58,30 +58,45 @@ $ python -m ip_omp.simulations --help
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-For finer-grained control over plotting, you can also use the `ip_omp/figures.py` CLI:
+For finer-grained control over plotting, you can also use the `ip_omp/figures.py` CLI. The `plot-noiseless` command is meant for plotting the noiseless experiment results:
 ```
-$ python -m ip_omp.figures --help
+$ python -m ip_omp.figures plot-noiseless --help
 
- Usage: python -m ip_omp.figures [OPTIONS] COMMAND [ARGS]...
+ Usage: python -m ip_omp.figures plot-noiseless [OPTIONS] SMALL_RESULT_PATH
+                                                LARGE_RESULT_PATH
 
+╭─ Arguments ──────────────────────────────────────────────────────────────────╮
+│ *    small_result_path      PATH  [default: None] [required]                 │
+│ *    large_result_path      PATH  [default: None] [required]                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
-│ --install-completion        [bash|zsh|fish|powershe  Install completion for  │
-│                             ll|pwsh]                 the specified shell.    │
-│                                                      [default: None]         │
-│ --show-completion           [bash|zsh|fish|powershe  Show completion for the │
-│                             ll|pwsh]                 specified shell, to     │
-│                                                      copy it or customize    │
-│                                                      the installation.       │
-│                                                      [default: None]         │
-│ --help                                               Show this message and   │
-│                                                      exit.                   │
-╰──────────────────────────────────────────────────────────────────────────────╯
-╭─ Commands ───────────────────────────────────────────────────────────────────╮
-│ plot-noiseless                                                               │
-│ plot-noisy                                                                   │
+│ --coeff-distribut…                     [sparse_gaussian|  [default:          │
+│                                        sparse_const]      sparse_gaussian]   │
+│ --save-dir                             PATH               [default: .]       │
+│ --save-file-format                     [eps|png]          [default: png]     │
+│ --together            --no-together                       [default:          │
+│                                                           no-together]       │
+│ --help                                                    Show this message  │
+│                                                           and exit.          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
-The `plot-noiseless` command is meant for plotting the noiseless experiment results, while the `plot-noisy` command is meant for plotting the noisy experiment results.
+The `plot-noisy` command is meant for plotting the noisy experiment results:
+```
+$ python -m ip_omp.figures plot-noisy --help
+
+ Usage: python -m ip_omp.figures plot-noisy [OPTIONS] SMALL_RESULT_PATH
+                                            LARGE_RESULT_PATH
+
+╭─ Arguments ──────────────────────────────────────────────────────────────────╮
+│ *    small_result_path      PATH  [default: None] [required]                 │
+│ *    large_result_path      PATH  [default: None] [required]                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --save-dir                PATH       [default: .]                            │
+│ --save-file-format        [eps|png]  [default: png]                          │
+│ --help                               Show this message and exit.             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
 
 ## CLIP-IP-OMP Experiments
 Coming soon.
