@@ -31,7 +31,7 @@ from the repository root directory. To plot the results, run
 Coming soon.
 
 ## License
-This repository is MIT-licensed. See LICENSE.txt for details.
+This repository is MIT-licensed. See [LICENSE](./LICENSE) for details.
 
 ## Cite
 ```
