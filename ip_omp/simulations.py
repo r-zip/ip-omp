@@ -13,9 +13,17 @@ import polars as pl
 import torch
 import torch.multiprocessing as mp
 import typer
-from gpustat.core import GPUStatCollection
+
+try:
+    from gpustat.core import GPUStatCollection
+
+    gpustat_available = True
+except ImportError:
+    gpustat_available = False
+
 from rich.logging import RichHandler
 from tqdm import tqdm
+from typing_extensions import Annotated
 
 from .algorithms import ip, omp
 from .constants import (
@@ -43,18 +51,20 @@ logger = logging.getLogger()
 DTYPE = torch.float64
 
 
-def get_gpus(
-    utilization: float = 0.25,
-    memory_usage: float = 0.25,
-    order_by: OrderBy = OrderBy.utilization,
-) -> list[int]:
-    gpus = GPUStatCollection.new_query()
-    free_gpus = [
-        g for g in gpus if (g.utilization < utilization * 100) and (g.memory_used / g.memory_total < memory_usage)
-    ]
+if gpustat_available:
 
-    free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
-    return [g.index for g in free_gpus]
+    def get_gpus(
+        utilization: float = 0.25,
+        memory_usage: float = 0.25,
+        order_by: OrderBy = OrderBy.utilization,
+    ) -> list[int]:
+        gpus = GPUStatCollection.new_query()
+        free_gpus = [
+            g for g in gpus if (g.utilization < utilization * 100) and (g.memory_used / g.memory_total < memory_usage)
+        ]
+
+        free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
+        return [g.index for g in free_gpus]
 
 
 def gen_dictionary(batch_size: int, m: int, n: int, device: str | torch.device = DEVICE) -> torch.Tensor:
@@ -345,16 +355,36 @@ def get_settings(
 
 
 def main(
-    results_dir: Path,
-    problem_size: ProblemSize = ProblemSize.small,
-    coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
-    noise_setting: NoiseSetting = NoiseSetting.noiseless,
-    overwrite: bool = False,
-    jobs: int = typer.Option(default=1, min=1),
-    device: Device = Device.cuda if DEVICE == "cuda" else Device.cpu,
-    memory_usage: float = typer.Option(default=0.75, min=0.0, max=1.0),
-    utilization: float = typer.Option(default=0.75, min=0.0, max=1.0),
-    order_by: OrderBy = OrderBy.utilization,
+    results_dir: Path = typer.Argument(..., help="Where to save the results."),
+    problem_size: ProblemSize = typer.Option(
+        default=ProblemSize.small, help="The size of the problem n=256 (small) or n=1024 (large)."
+    ),
+    coeff_distribution: CoeffDistribution = typer.Option(
+        default=CoeffDistribution.sparse_gaussian, help="The distribution of the coefficients of the sparse code."
+    ),
+    noise_setting: NoiseSetting = typer.Option(
+        default=NoiseSetting.noiseless, help="The noise setting of the experiment."
+    ),
+    overwrite: bool = typer.Option(default=False, help="Whether to overwrite existing results."),
+    jobs: int = typer.Option(default=1, min=1, help="Maximum number of subprocesses to run."),
+    device: Device = typer.Option(
+        default=Device.cuda if DEVICE == "cuda" else Device.cpu, help="Device to use (CPU/GPU)."
+    ),
+    memory_usage: float = typer.Option(
+        default=0.75,
+        min=0.0,
+        max=1.0,
+        help="Memory usage below which a GPU will be considered free when launching new subprocesses.",
+    ),
+    utilization: float = typer.Option(
+        default=0.75,
+        min=0.0,
+        max=1.0,
+        help="Utilization below which a GPU will be considered free when launching new subprocesses.",
+    ),
+    order_by: OrderBy = typer.Option(
+        default=OrderBy.utilization, help="How to sort available GPUs when launching subprocesses."
+    ),
 ) -> None:
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
