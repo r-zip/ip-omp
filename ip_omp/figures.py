@@ -7,7 +7,7 @@ import polars as pl
 import seaborn as sns
 import typer
 
-from .constants import CoeffDistribution, SaveFileFormat, SNRs
+from .constants import MAX_M, CoeffDistribution, NoiseSetting, ProblemSize, SaveFileFormat, SNRs
 
 matplotlib.rcParams.update({"font.size": 22})
 
@@ -313,24 +313,14 @@ def plot_noiseless(
     max_m_large: int | None = None,
     together: bool = False,
 ) -> None:
-    if coeff_distribution == CoeffDistribution.sparse_gaussian:
-        max_m_small = 208
-        max_m_large = 115
-    else:  # sparse_const
-        max_m_small = 256
-        max_m_large = 205
+    max_m_small = MAX_M[(ProblemSize.small, NoiseSetting.noiseless, coeff_distribution)]
+    max_m_large = MAX_M[(ProblemSize.large, NoiseSetting.noiseless, coeff_distribution)]
 
     sns.set()
     sns.set_context("talk")
 
     df_small = pl.read_parquet(small_result_path)
     df_large = pl.read_parquet(large_result_path)
-
-    # TODO: REMOVE ME
-    if "snr" not in df_small.columns:
-        df_small = df_small.with_columns(snr=float("inf"))
-    if "snr" not in df_large.columns:
-        df_large = df_large.with_columns(snr=float("inf"))
 
     if max_m_small is not None:
         df_small = df_small.filter(c("m") <= max_m_small)
@@ -341,9 +331,6 @@ def plot_noiseless(
     # for noiseless, filter to snr == inf
     df_small = df_small.filter(c("snr") == float("inf"))
     df_large = df_large.filter(c("snr") == float("inf"))
-
-    print("small m_max:", df_small["m"].max())
-    print("large m_max:", df_large["m"].max())
 
     if together:
         plot_metric_curves(
@@ -373,7 +360,6 @@ def plot_noisy(
 
     df_small = pl.read_parquet(small_result_path)
     df_large = pl.read_parquet(large_result_path)
-    breakpoint()
     plot_metric_curves_noisy(
         df_small,
         df_large,
