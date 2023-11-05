@@ -328,8 +328,8 @@ def get_settings(
     """
     n = 256 if problem_size == ProblemSize.small else 1024
     min_m = MIN_M[problem_size]
-    max_m = MAX_M[problem_size]
-    delta_m = DELTA_M[(problem_size, noise_setting, coeff_distribution)]
+    max_m = MAX_M[(problem_size, noise_setting, coeff_distribution)]
+    delta_m = DELTA_M[problem_size]
     min_s = MIN_S[problem_size]
     max_s = MAX_S[problem_size]
     delta_s = DELTA_S[problem_size]
