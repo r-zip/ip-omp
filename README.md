@@ -27,6 +27,62 @@ from the repository root directory. To plot the results, run
 ./script/sparse_recovery_plots.sh
 ```
 
+To run a smaller subset of experiments, you can use the `ip_omp/simulations.py` CLI:
+```
+$ python -m ip_omp.simulations --help
+
+ Usage: python -m ip_omp.simulations [OPTIONS] RESULTS_DIR
+
+╭─ Arguments ──────────────────────────────────────────────────────────────────╮
+│ *    results_dir      PATH  [default: None] [required]                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --problem-size                          [small|large]      [default: small]  │
+│ --coeff-distribut…                      [sparse_gaussian|  [default:         │
+│                                         sparse_const]      sparse_gaussian]  │
+│ --noise-setting                         [noiseless|noisy]  [default:         │
+│                                                            noiseless]        │
+│ --overwrite           --no-overwrite                       [default:         │
+│                                                            no-overwrite]     │
+│ --jobs                                  INTEGER RANGE      [default: 1]      │
+│                                         [x>=1]                               │
+│ --device                                [cuda|cpu]         [default: cpu]    │
+│ --memory-usage                          FLOAT RANGE        [default: 0.75]   │
+│                                         [0.0<=x<=1.0]                        │
+│ --utilization                           FLOAT RANGE        [default: 0.75]   │
+│                                         [0.0<=x<=1.0]                        │
+│ --order-by                              [utilization|memo  [default:         │
+│                                         ry_usage]          utilization]      │
+│ --help                                                     Show this message │
+│                                                            and exit.         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+For finer-grained control over plotting, you can also use the `ip_omp/figures.py` CLI:
+```
+$ python -m ip_omp.figures --help
+
+ Usage: python -m ip_omp.figures [OPTIONS] COMMAND [ARGS]...
+
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --install-completion        [bash|zsh|fish|powershe  Install completion for  │
+│                             ll|pwsh]                 the specified shell.    │
+│                                                      [default: None]         │
+│ --show-completion           [bash|zsh|fish|powershe  Show completion for the │
+│                             ll|pwsh]                 specified shell, to     │
+│                                                      copy it or customize    │
+│                                                      the installation.       │
+│                                                      [default: None]         │
+│ --help                                               Show this message and   │
+│                                                      exit.                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────╮
+│ plot-noiseless                                                               │
+│ plot-noisy                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+The `plot-noiseless` command is meant for plotting the noiseless experiment results, while the `plot-noisy` command is meant for plotting the noisy experiment results.
+
 ## CLIP-IP-OMP Experiments
 Coming soon.
 
