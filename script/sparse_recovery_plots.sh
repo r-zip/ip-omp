@@ -12,6 +12,7 @@ do
         --coeff-distribution="sparse_${coeff_dist}" \
         --save-dir=$OUTPUT_DIR \
         --save-file-format=$FORMAT \
+        --together \
         "${RESULTS_DIR}/results_noiseless_small_${coeff_dist}/results.parquet" \
         "${RESULTS_DIR}/results_noiseless_large_${coeff_dist}/results.parquet"
 done
