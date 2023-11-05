@@ -1,28 +1,29 @@
 #!/bin/bash
 
 JOBS=8
-OUTPUT_DIR="./"
+OUTPUT_DIR="./results"
 
-python -m ip_is_all_you_need.simulations \
-    --setting=small \
-    --jobs=$JOBS \
-    --coeff-distribution=sparse_gaussian \
-    "${OUTPUT_DIR}/results_small_${SUFFIX}"
+mkdir -p $OUTPUT_DIR
 
-python -m ip_is_all_you_need.simulations \
-    --setting=large \
-    --jobs=$JOBS \
-    --coeff-distribution=sparse_gaussian \
-    "${OUTPUT_DIR}/results_large_${SUFFIX}"
+for problem_size in small large
+do
+    for coeff_dist in gaussian const
+    do
+        python -m ip_omp.simulations \
+            --jobs=$JOBS \
+            --noise-setting=noiseless \
+            --problem-size=$problem_size \
+            --coeff-distribution="sparse_${coeff_dist}" \
+            "${OUTPUT_DIR}/results_noiseless_${problem_size}_${coeff_dist}"
+    done
+done
 
-python -m ip_is_all_you_need.simulations \
-    --setting=small \
-    --jobs=$JOBS \
-    --coeff-distribution=sparse_const \
-    "${OUTPUT_DIR}/results_small_${SUFFIX}_const"
-
-python -m ip_is_all_you_need.simulations \
-    --setting=large \
-    --jobs=$JOBS \
-    --coeff-distribution=sparse_const \
-    "${OUTPUT_DIR}/results_large_${SUFFIX}_const"
+for problem_size in small large
+do
+    python -m ip_omp.simulations \
+        --jobs=$JOBS \
+        --noise-setting=noisy \
+        --problem-size=$problem_size \
+        --coeff-distribution=sparse_gaussian \
+        "${OUTPUT_DIR}/results_noisy_${problem_size}"
+done

@@ -346,14 +346,15 @@ def get_settings(
 
 def main(
     results_dir: Path,
+    problem_size: ProblemSize = ProblemSize.small,
+    coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
+    noise_setting: NoiseSetting = NoiseSetting.noiseless,
     overwrite: bool = False,
     jobs: int = typer.Option(default=1, min=1),
     device: Device = Device.cuda if DEVICE == "cuda" else Device.cpu,
-    problem_size: ProblemSize = ProblemSize.small,
     memory_usage: float = typer.Option(default=0.75, min=0.0, max=1.0),
     utilization: float = typer.Option(default=0.75, min=0.0, max=1.0),
     order_by: OrderBy = OrderBy.utilization,
-    coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
 ) -> None:
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
@@ -361,7 +362,7 @@ def main(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
-    settings, num_settings, experiment_numbers = get_settings(problem_size, coeff_distribution)
+    settings, num_settings, experiment_numbers = get_settings(problem_size, coeff_distribution, noise_setting)
 
     if device == Device.cuda:
         workers = min(
