@@ -304,13 +304,18 @@ def plot_metric_curves_noisy(
 
 @app.command()
 def plot_noiseless(
-    small_result_path: Path,
-    large_result_path: Path,
-    coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
-    save_dir: Path = Path("."),
-    save_file_format: SaveFileFormat = SaveFileFormat.png,
-    together: bool = False,
+    small_result_path: Path = typer.Argument(..., help="Path to the small (n=256) results file."),
+    large_result_path: Path = typer.Argument(..., help="Path to the large (n=1024) results file."),
+    coeff_distribution: CoeffDistribution = typer.Option(
+        default=CoeffDistribution.sparse_gaussian, help="The distribution of the coefficients of the sparse code."
+    ),
+    save_dir: Path = typer.Option(default=Path("."), help="Where to save resulting plots."),
+    save_file_format: SaveFileFormat = typer.Option(default=SaveFileFormat.png, help="Format of the plot file."),
+    together: bool = typer.Option(
+        default=False, help="Whether to plot small (n=256) and large (n=1024) results in the same figure."
+    ),
 ) -> None:
+    """Plot the results of the noiseless sparse recovery experiments."""
     max_m_small = MAX_M[(ProblemSize.small, NoiseSetting.noiseless, coeff_distribution)]
     max_m_large = MAX_M[(ProblemSize.large, NoiseSetting.noiseless, coeff_distribution)]
 
@@ -349,11 +354,12 @@ def plot_noiseless(
 
 @app.command()
 def plot_noisy(
-    small_result_path: Path,
-    large_result_path: Path,
-    save_dir: Path = Path("."),
-    save_file_format: SaveFileFormat = SaveFileFormat.png,
+    small_result_path: Path = typer.Argument(..., help="Path to the small (n=256) results file."),
+    large_result_path: Path = typer.Argument(..., help="Path to the large (n=1024) results file."),
+    save_dir: Path = typer.Option(default=Path("."), help="Where to save resulting plots."),
+    save_file_format: SaveFileFormat = typer.Option(default=SaveFileFormat.png, help="Format of the plot file."),
 ):
+    """Plot the results of the noisy sparse recovery experiments."""
     sns.set()
 
     df_small = pl.read_parquet(small_result_path)
