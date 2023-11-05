@@ -2,7 +2,7 @@
 
 RESULTS_DIR="./results"
 OUTPUT_DIR="./plots"
-FORMAT=".png"
+FORMAT="png"
 
 mkdir -p $OUTPUT_DIR
 
