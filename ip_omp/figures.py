@@ -309,8 +309,6 @@ def plot_noiseless(
     coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
     save_dir: Path = Path("."),
     save_file_format: SaveFileFormat = SaveFileFormat.png,
-    max_m_small: int | None = None,
-    max_m_large: int | None = None,
     together: bool = False,
 ) -> None:
     max_m_small = MAX_M[(ProblemSize.small, NoiseSetting.noiseless, coeff_distribution)]
