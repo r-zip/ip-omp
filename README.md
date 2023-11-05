@@ -18,15 +18,18 @@ Information Pursuit (IP) is a classical active testing algorithm for predicting 
 Coming soon.
 
 ## Sparse Recovery Experiments
-To execute the sparse recovery experiments, run
+To execute all of the sparse recovery experiments in one go, run
 ```
 ./script/sparse_recovery_experiments.sh
 ```
-from the repository root directory. To plot the results, run
+from the repository root directory. To plot all of the results from running the above script, run
 ```
 ./script/sparse_recovery_plots.sh
 ```
 
+Due to the way things are saved, these scripts will consume a lot of disk space (multiple TB). We are working on lightening this disk usage.
+
+### Finer-Grained Scripts
 To run a smaller subset of experiments, you can use the `ip_omp/simulations.py` CLI:
 ```
 $ python -m ip_omp.simulations --help
