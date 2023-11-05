@@ -1,9 +1,9 @@
 #!/bin/bash
 
 JOBS=8
-OUTPUT_DIR="./results"
+RESULTS_DIR="./results"
 
-mkdir -p $OUTPUT_DIR
+mkdir -p $RESULTS_DIR
 
 for problem_size in small large
 do
@@ -14,7 +14,7 @@ do
             --noise-setting=noiseless \
             --problem-size=$problem_size \
             --coeff-distribution="sparse_${coeff_dist}" \
-            "${OUTPUT_DIR}/results_noiseless_${problem_size}_${coeff_dist}"
+            "${RESULTS_DIR}/results_noiseless_${problem_size}_${coeff_dist}"
     done
 done
 
@@ -25,5 +25,5 @@ do
         --noise-setting=noisy \
         --problem-size=$problem_size \
         --coeff-distribution=sparse_gaussian \
-        "${OUTPUT_DIR}/results_noisy_${problem_size}"
+        "${RESULTS_DIR}/results_noisy_${problem_size}"
 done
