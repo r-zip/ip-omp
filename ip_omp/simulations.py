@@ -27,6 +27,7 @@ from .constants import (
     MIN_M,
     MIN_S,
     SNR_GRID,
+    TRIALS,
     CoeffDistribution,
     Device,
     NoiseSetting,
@@ -38,8 +39,6 @@ from .util import db_to_ratio
 
 logging.basicConfig(level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger()
-
-TRIALS = 1_000
 
 DTYPE = torch.float64
 
