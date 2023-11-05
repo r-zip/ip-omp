@@ -24,28 +24,16 @@ METRIC_NAME_LOOKUP = {
 app = typer.Typer()
 
 
-def filter_df(
-    df: pl.DataFrame, algorithm: Literal["ip", "omp", None] = None
-) -> pl.DataFrame:
+def filter_df(df: pl.DataFrame, algorithm: Literal["ip", "omp", None] = None) -> pl.DataFrame:
     if algorithm:
         df = df.filter(c("algorithm") == algorithm)
-    df = df.with_columns(
-        c("iter")
-        .max()
-        .over(["experiment_number", "trial", "algorithm"])
-        .alias("max_iter")
-    )
+    df = df.with_columns(c("iter").max().over(["experiment_number", "trial", "algorithm"]).alias("max_iter"))
     return df.filter(c("iter") == c("max_iter"))
 
 
 def early_termination(df: pl.DataFrame) -> pl.DataFrame:
     return (
-        df.with_columns(
-            c("iter")
-            .max()
-            .over(["experiment_number", "trial", "algorithm"])
-            .alias("max_iter")
-        )
+        df.with_columns(c("iter").max().over(["experiment_number", "trial", "algorithm"]).alias("max_iter"))
         .with_columns((c("max_iter") < c("sparsity") - 1).alias("early_term"))
         .group_by(["experiment_number", "trial", "algorithm"])
         .agg(
@@ -57,9 +45,7 @@ def early_termination(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def get_phase_transition_data(
-    df: pl.DataFrame, algorithm: Literal["ip", "omp"]
-) -> pl.DataFrame:
+def get_phase_transition_data(df: pl.DataFrame, algorithm: Literal["ip", "omp"]) -> pl.DataFrame:
     df_pt = (
         # filter to only the last iteration
         filter_df(df, algorithm=algorithm)
@@ -328,11 +314,11 @@ def plot_noiseless(
     together: bool = False,
 ) -> None:
     if coeff_distribution == CoeffDistribution.sparse_gaussian:
-        max_m_small = 210
-        max_m_large = 119
+        max_m_small = 208
+        max_m_large = 115
     else:  # sparse_const
         max_m_small = 256
-        max_m_large = 208
+        max_m_large = 205
 
     sns.set()
     sns.set_context("talk")
@@ -356,23 +342,23 @@ def plot_noiseless(
     df_small = df_small.filter(c("snr") == float("inf"))
     df_large = df_large.filter(c("snr") == float("inf"))
 
+    print("small m_max:", df_small["m"].max())
+    print("large m_max:", df_large["m"].max())
+
     if together:
         plot_metric_curves(
             df_small,
             df_large,
-            save_file=save_dir
-            / f"noiseless_recovery_{str(coeff_distribution)}.{str(save_file_format)}",
+            save_file=save_dir / f"noiseless_recovery_{str(coeff_distribution)}.{str(save_file_format)}",
         )
     else:
         plot_probability_curve(
             df_small,
-            save_file=save_dir
-            / f"noiseless_recovery_{str(coeff_distribution)}_small.{str(save_file_format)}",
+            save_file=save_dir / f"noiseless_recovery_{str(coeff_distribution)}_small.{str(save_file_format)}",
         )
         plot_probability_curve(
             df_large,
-            save_file=save_dir
-            / f"noiseless_recovery_{str(coeff_distribution)}_large.{str(save_file_format)}",
+            save_file=save_dir / f"noiseless_recovery_{str(coeff_distribution)}_large.{str(save_file_format)}",
         )
 
 
@@ -387,6 +373,7 @@ def plot_noisy(
 
     df_small = pl.read_parquet(small_result_path)
     df_large = pl.read_parquet(large_result_path)
+    breakpoint()
     plot_metric_curves_noisy(
         df_small,
         df_large,

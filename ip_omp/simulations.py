@@ -18,39 +18,29 @@ from rich.logging import RichHandler
 from tqdm import tqdm
 
 from .algorithms import ip, omp
-from .constants import DEVICE, CoeffDistribution, Device, OrderBy, Setting
+from .constants import (
+    DELTA_M,
+    DELTA_S,
+    DEVICE,
+    MAX_M,
+    MAX_S,
+    MIN_M,
+    MIN_S,
+    SNR_GRID,
+    CoeffDistribution,
+    Device,
+    NoiseSetting,
+    OrderBy,
+    ProblemSize,
+)
 from .metrics import iou, mse, mutual_coherence, precision, recall
 from .util import db_to_ratio
 
-logging.basicConfig(
-    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
-)
+logging.basicConfig(level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger()
 
-# fmt: off
 TRIALS = 1_000
 
-SMALL_SETTINGS = {
-    "dimensions": [
-        *[(m, 256) for m in range(4, 300, 12)],
-    ],
-    "sparsity": list(range(4, 42, 6)),
-    "snr": [np.inf],
-}
-
-LARGE_SETTINGS = {
-    "dimensions": [
-        *[(m, 1024) for m in range(5, 305, 5)],
-    ],
-    "sparsity": list(range(4, 18, 2)),
-    "snr": [np.inf],
-}
-# fmt: on
-
-NUM_SETTINGS_SMALL = len(list(product(*list(SMALL_SETTINGS.values()))))
-NUM_SETTINGS_LARGE = len(list(product(*list(LARGE_SETTINGS.values()))))
-SMALL_EXPERIMENT_NUMBERS = list(range(NUM_SETTINGS_SMALL))
-LARGE_EXPERIMENT_NUMBERS = list(range(NUM_SETTINGS_LARGE))
 DTYPE = torch.float64
 
 
@@ -61,19 +51,14 @@ def get_gpus(
 ) -> list[int]:
     gpus = GPUStatCollection.new_query()
     free_gpus = [
-        g
-        for g in gpus
-        if (g.utilization < utilization * 100)
-        and (g.memory_used / g.memory_total < memory_usage)
+        g for g in gpus if (g.utilization < utilization * 100) and (g.memory_used / g.memory_total < memory_usage)
     ]
 
     free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
     return [g.index for g in free_gpus]
 
 
-def gen_dictionary(
-    batch_size: int, m: int, n: int, device: str | torch.device = DEVICE
-) -> torch.Tensor:
+def gen_dictionary(batch_size: int, m: int, n: int, device: str | torch.device = DEVICE) -> torch.Tensor:
     Phi = torch.randn(batch_size, m, n, device=device)
     return Phi / torch.linalg.norm(Phi, dim=1)[:, None, :]
 
@@ -116,12 +101,7 @@ def generate_measurements_and_coeffs(
             torch.zeros(n - s, device=device, dtype=torch.bool),
         ]
     )
-    supp = torch.vstack(
-        [
-            bool_index[torch.randperm(n, device=device)].clone()
-            for _ in range(batch_size)
-        ]
-    )[:, :, None]
+    supp = torch.vstack([bool_index[torch.randperm(n, device=device)].clone() for _ in range(batch_size)])[:, :, None]
     if coeff_distribution == CoeffDistribution.sparse_gaussian:
         values = torch.randn(batch_size * s, device=device)
     elif coeff_distribution == CoeffDistribution.sparse_const:
@@ -176,9 +156,7 @@ def compute_metrics(
         nnz = len(support)
         norm_x = torch.linalg.norm(x).item()
         norm_y = torch.linalg.norm(y).item()
-        for iter, (objective_t, x_hat_t, y_hat_t) in enumerate(
-            zip(objective, x_hat, y_hat)
-        ):
+        for iter, (objective_t, x_hat_t, y_hat_t) in enumerate(zip(objective, x_hat, y_hat)):
             metrics_now = {
                 "trial": trial,
                 "iter": iter,
@@ -222,11 +200,7 @@ def run_experiment(
     torch.set_num_threads(4)
 
     if device_type == Device.cuda:
-        while not (
-            gpus := get_gpus(
-                utilization=utilization, memory_usage=memory_usage, order_by=order_by
-            )
-        ):
+        while not (gpus := get_gpus(utilization=utilization, memory_usage=memory_usage, order_by=order_by)):
             logger.info("Waiting for available GPU...")
             sleep(1)
 
@@ -240,9 +214,7 @@ def run_experiment(
     experiment_results_dir.mkdir(exist_ok=True)
 
     with torch.no_grad():
-        logger.info(
-            f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
-        )
+        logger.info(f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}")
         Phi = gen_dictionary(TRIALS, m, n, device=device)
 
         torch.save(Phi, experiment_results_dir / "Phi.pt")
@@ -277,9 +249,7 @@ def run_experiment(
         metrics_omp = compute_metrics(log_omp, true_support, x, y, Phi, "omp")
 
         logger.info("Combining metrics")
-        df = pl.concat(
-            [pl.DataFrame(metrics_ip), pl.DataFrame(metrics_omp)], how="vertical"
-        )
+        df = pl.concat([pl.DataFrame(metrics_ip), pl.DataFrame(metrics_omp)], how="vertical")
 
         # compute iou
         pivot_table = df.pivot(
@@ -287,11 +257,7 @@ def run_experiment(
             columns="algorithm",
             values="estimated_support",
             aggregate_function="first",
-        ).with_columns(
-            pl.struct(["ip", "omp"])
-            .apply(lambda x: iou(x["ip"], x["omp"]))
-            .alias("iou")
-        )
+        ).with_columns(pl.struct(["ip", "omp"]).apply(lambda x: iou(x["ip"], x["omp"])).alias("iou"))
 
         df = (
             df.join(pivot_table, on=["trial", "iter"])
@@ -351,34 +317,52 @@ def aggregate_results(results_dir: Path) -> None:
     df = pl.concat(dfs, how="vertical")
     df.write_parquet(results_dir / "results.parquet")
 
-    torch.cuda.empty_cache()
+
+def get_settings(
+    problem_size: ProblemSize,
+    coeff_distribution: CoeffDistribution,
+    noise_setting: NoiseSetting,
+) -> dict[str, list[tuple[int, int]] | list[float]]:
+    """
+    Get dictionary of settings (dimensions, sparsities, SNRs) for problem size (small n/large n), coefficient
+    distribution (gaussian/constant), and noise setting (noisy/noiseless).
+    """
+    n = 256 if problem_size == ProblemSize.small else 1024
+    min_m = MIN_M[problem_size]
+    max_m = MAX_M[problem_size]
+    delta_m = DELTA_M[(problem_size, noise_setting, coeff_distribution)]
+    min_s = MIN_S[problem_size]
+    max_s = MAX_S[problem_size]
+    delta_s = DELTA_S[problem_size]
+
+    settings = dict()
+    settings["dimensions"] = [(m, n) for m in range(min_m, max_m + delta_m, delta_m)]
+    settings["sparsity"] = list(range(min_s, max_s + delta_s, delta_s))
+    settings["snr"] = SNR_GRID[noise_setting]
+
+    num_settings = len(list(product(*list(settings.values()))))
+    experiment_numbers = list(range(num_settings))
+    return settings, num_settings, experiment_numbers
 
 
 def main(
     results_dir: Path,
     overwrite: bool = False,
-    jobs: int = typer.Option(default=1, min=1, max=NUM_SETTINGS_LARGE),
+    jobs: int = typer.Option(default=1, min=1),
     device: Device = Device.cuda if DEVICE == "cuda" else Device.cpu,
-    setting: Setting = Setting.small,
+    problem_size: ProblemSize = ProblemSize.small,
     memory_usage: float = typer.Option(default=0.75, min=0.0, max=1.0),
     utilization: float = typer.Option(default=0.75, min=0.0, max=1.0),
     order_by: OrderBy = OrderBy.utilization,
     coeff_distribution: CoeffDistribution = CoeffDistribution.sparse_gaussian,
-):
+) -> None:
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
         FileExistsError(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
-    if setting == Setting.small:
-        settings = SMALL_SETTINGS
-        num_settings = NUM_SETTINGS_SMALL
-        experiment_numbers = SMALL_EXPERIMENT_NUMBERS
-    else:
-        settings = LARGE_SETTINGS
-        num_settings = NUM_SETTINGS_LARGE
-        experiment_numbers = LARGE_EXPERIMENT_NUMBERS
+    settings, num_settings, experiment_numbers = get_settings(problem_size, coeff_distribution)
 
     if device == Device.cuda:
         workers = min(
