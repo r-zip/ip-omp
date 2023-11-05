@@ -9,7 +9,7 @@ mkdir -p $OUTPUT_DIR
 for coeff_dist in gaussian const
 do
     python -m ip_omp.figures plot-noiseless \
-        --coeff-distribution=$coeff_dist \
+        --coeff-distribution="sparse_${coeff_dist}" \
         --save-dir=$OUTPUT_DIR \
         --save-file-format=$FORMAT \
         "${RESULTS_DIR}/results_noiseless_small_${coeff_dist}" \
