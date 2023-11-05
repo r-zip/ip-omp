@@ -1,4 +1,4 @@
-name: gpustat2
+name: ip_omp
 channels:
   - defaults
 dependencies:
@@ -184,4 +184,3 @@ dependencies:
       - webencodings==0.5.1
       - websocket-client==1.6.1
       - widgetsnbextension==4.0.8
-prefix: /cis/home/rpilgri1/miniconda3/envs/gpustat2
