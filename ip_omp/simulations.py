@@ -13,14 +13,7 @@ import polars as pl
 import torch
 import torch.multiprocessing as mp
 import typer
-
-try:
-    from gpustat.core import GPUStatCollection
-
-    gpustat_available = True
-except ImportError:
-    gpustat_available = False
-
+from gpustat.core import GPUStatCollection
 from rich.logging import RichHandler
 from tqdm import tqdm
 
@@ -50,20 +43,18 @@ logger = logging.getLogger()
 DTYPE = torch.float64
 
 
-if gpustat_available:
+def get_gpus(
+    utilization: float = 0.25,
+    memory_usage: float = 0.25,
+    order_by: OrderBy = OrderBy.utilization,
+) -> list[int]:
+    gpus = GPUStatCollection.new_query()
+    free_gpus = [
+        g for g in gpus if (g.utilization < utilization * 100) and (g.memory_used / g.memory_total < memory_usage)
+    ]
 
-    def get_gpus(
-        utilization: float = 0.25,
-        memory_usage: float = 0.25,
-        order_by: OrderBy = OrderBy.utilization,
-    ) -> list[int]:
-        gpus = GPUStatCollection.new_query()
-        free_gpus = [
-            g for g in gpus if (g.utilization < utilization * 100) and (g.memory_used / g.memory_total < memory_usage)
-        ]
-
-        free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
-        return [g.index for g in free_gpus]
+    free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
+    return [g.index for g in free_gpus]
 
 
 def gen_dictionary(batch_size: int, m: int, n: int, device: str | torch.device = DEVICE) -> torch.Tensor:

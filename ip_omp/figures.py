@@ -31,20 +31,6 @@ def filter_df(df: pl.DataFrame, algorithm: Literal["ip", "omp", None] = None) ->
     return df.filter(c("iter") == c("max_iter"))
 
 
-def early_termination(df: pl.DataFrame) -> pl.DataFrame:
-    return (
-        df.with_columns(c("iter").max().over(["experiment_number", "trial", "algorithm"]).alias("max_iter"))
-        .with_columns((c("max_iter") < c("sparsity") - 1).alias("early_term"))
-        .group_by(["experiment_number", "trial", "algorithm"])
-        .agg(
-            c("m").first(),
-            c("n").first(),
-            c("sparsity").first(),
-            c("early_term").mean(),
-        )
-    )
-
-
 def get_phase_transition_data(df: pl.DataFrame, algorithm: Literal["ip", "omp"]) -> pl.DataFrame:
     df_pt = (
         # filter to only the last iteration
@@ -81,27 +67,6 @@ def get_phase_transition_data(df: pl.DataFrame, algorithm: Literal["ip", "omp"])
         )
     )
     return df_pt
-
-
-def plot_phase_transition(df: pl.DataFrame, algorithm: Literal["ip", "omp"]) -> None:
-    n = df["n"][0]
-    df_pt = get_phase_transition_data(df, algorithm)
-    tbl = (
-        df_pt.sort(by=["m", "sparsity"], descending=[True, False])
-        .pivot(
-            values="success_rate",
-            index="m",
-            columns="sparsity",
-            aggregate_function="first",
-        )
-        .to_pandas()
-    )
-    tbl = tbl.set_index("m", drop=True)
-    sns.heatmap(tbl)
-    plt.xlabel("Sparsity $s$")
-    plt.ylabel("Number of measurements $m$")
-
-    plt.title(f"Phase Transition for {algorithm.upper()} (n={n})")
 
 
 def plot_probability_curve(df: pl.DataFrame, save_file: Path | None = None) -> None:
