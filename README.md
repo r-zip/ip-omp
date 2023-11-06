@@ -171,7 +171,7 @@ This repository is MIT-licensed. See [LICENSE](./LICENSE) for details.
 @inproceedings{
 chattopadhyay2023information,
 title={Information Maximization Perspective of Orthogonal Matching Pursuit with Applications to Explainable {AI}},
-author={Aditya Chattopadhyay and Ryan Pilgrim and Rene Vidal},
+author={Aditya Chattopadhyay and Ryan Pilgrim and Ren\'{e} Vidal},
 booktitle={Thirty-seventh Conference on Neural Information Processing Systems},
 year={2023},
 url={https://openreview.net/forum?id=CAF4CnUblx}
