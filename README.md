@@ -27,7 +27,7 @@ from the repository root directory. To plot all of the results from running the 
 ./script/sparse_recovery_plots.sh
 ```
 
-Due to the way things are saved, these scripts will consume a lot of disk space (> 1 TB). We are working on lightening this disk usage.
+Due to the way things are saved, these scripts will consume a lot of disk space (≈900 GB). We are working on lightening this disk usage.
 
 ### Finer-Grained Scripts
 To run a smaller subset of experiments, you can use the `ip_omp/simulations.py` CLI:
