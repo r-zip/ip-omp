@@ -23,7 +23,6 @@ except ImportError:
 
 from rich.logging import RichHandler
 from tqdm import tqdm
-from typing_extensions import Annotated
 
 from .algorithms import ip, omp
 from .constants import (
