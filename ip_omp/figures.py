@@ -7,10 +7,14 @@ import polars as pl
 import seaborn as sns
 import typer
 
-from .constants import MAX_M, CoeffDistribution, NoiseSetting, ProblemSize, SaveFileFormat, SNRs
-
-matplotlib.rcParams.update({"font.size": 22})
-
+from .constants import (
+    MAX_M,
+    CoeffDistribution,
+    NoiseSetting,
+    ProblemSize,
+    SaveFileFormat,
+    SNRs,
+)
 
 c = pl.col
 
@@ -211,8 +215,8 @@ def plot_metric_curves_noisy(
     semilogy: bool = False,
     dpi: int = 300,
     sharey: bool | str = False,
-    font_size: int | None = None,
-    legend_font_size: int | None = None,
+    font_size: int = 18,
+    legend_font_size: int = 14,
     snrs: SNRs = SNRs.main,
 ) -> None:
     if snrs == SNRs.main:
@@ -272,12 +276,14 @@ def plot_noiseless(
     small_result_path: Path = typer.Argument(..., help="Path to the small (n=256) results file."),
     large_result_path: Path = typer.Argument(..., help="Path to the large (n=1024) results file."),
     coeff_distribution: CoeffDistribution = typer.Option(
-        default=CoeffDistribution.sparse_gaussian, help="The distribution of the coefficients of the sparse code."
+        default=CoeffDistribution.sparse_gaussian,
+        help="The distribution of the coefficients of the sparse code.",
     ),
     save_dir: Path = typer.Option(default=Path("."), help="Where to save resulting plots."),
     save_file_format: SaveFileFormat = typer.Option(default=SaveFileFormat.png, help="Format of the plot file."),
     together: bool = typer.Option(
-        default=False, help="Whether to plot small (n=256) and large (n=1024) results in the same figure."
+        default=False,
+        help="Whether to plot small (n=256) and large (n=1024) results in the same figure.",
     ),
 ) -> None:
     """Plot the results of the noiseless sparse recovery experiments."""
@@ -352,4 +358,5 @@ def plot_noisy(
 
 
 if __name__ == "__main__":
+    matplotlib.rcParams.update({"font.size": 22})
     app()

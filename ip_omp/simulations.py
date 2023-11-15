@@ -193,8 +193,12 @@ def run_experiment(
     memory_usage: float,
     order_by: str,
     coeff_distribution: CoeffDistribution,
+    noise_setting: NoiseSetting,
 ) -> None:
-    torch.random.manual_seed(12345)
+    if noise_setting == NoiseSetting.noiseless:
+        torch.random.manual_seed(12345)
+    else:
+        torch.random.manual_seed(experiment_number)
     torch.set_default_dtype(torch.float64)
     torch.set_num_threads(4)
 
@@ -347,10 +351,12 @@ def get_settings(
 def main(
     results_dir: Path = typer.Argument(..., help="Where to save the results."),
     problem_size: ProblemSize = typer.Option(
-        default=ProblemSize.small, help="The size of the problem n=256 (small) or n=1024 (large)."
+        default=ProblemSize.small,
+        help="The size of the problem n=256 (small) or n=1024 (large).",
     ),
     coeff_distribution: CoeffDistribution = typer.Option(
-        default=CoeffDistribution.sparse_gaussian, help="The distribution of the coefficients of the sparse code."
+        default=CoeffDistribution.sparse_gaussian,
+        help="The distribution of the coefficients of the sparse code.",
     ),
     noise_setting: NoiseSetting = typer.Option(
         default=NoiseSetting.noiseless, help="The noise setting of the experiment."
@@ -358,7 +364,8 @@ def main(
     overwrite: bool = typer.Option(default=False, help="Whether to overwrite existing results."),
     jobs: int = typer.Option(default=1, min=1, help="Maximum number of subprocesses to run."),
     device: Device = typer.Option(
-        default=Device.cuda if DEVICE == "cuda" else Device.cpu, help="Device to use (CPU/GPU)."
+        default=Device.cuda if DEVICE == "cuda" else Device.cpu,
+        help="Device to use (CPU/GPU).",
     ),
     memory_usage: float = typer.Option(
         default=0.75,
@@ -373,7 +380,8 @@ def main(
         help="Utilization below which a GPU will be considered free when launching new subprocesses.",
     ),
     order_by: OrderBy = typer.Option(
-        default=OrderBy.utilization, help="How to sort available GPUs when launching subprocesses."
+        default=OrderBy.utilization,
+        help="How to sort available GPUs when launching subprocesses.",
     ),
 ) -> None:
     mp.set_start_method("spawn")
@@ -425,6 +433,7 @@ def main(
                     memory_usage=memory_usage,
                     order_by=order_by,
                     coeff_distribution=coeff_distribution,
+                    noise_setting=noise_setting,
                 )
             )
         else:
@@ -440,6 +449,7 @@ def main(
                 memory_usage=memory_usage,
                 order_by=order_by,
                 coeff_distribution=coeff_distribution,
+                noise_setting=noise_setting,
             )
 
         if k < jobs:
