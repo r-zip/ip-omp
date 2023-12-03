@@ -13,7 +13,12 @@ import polars as pl
 import torch
 import torch.multiprocessing as mp
 import typer
-from gpustat.core import GPUStatCollection
+
+try:
+    from gpustat.core import GPUStatCollection
+except ImportError:
+    GPUStatCollection = None
+
 from rich.logging import RichHandler
 from tqdm import tqdm
 
@@ -260,7 +265,7 @@ def run_experiment(
             columns="algorithm",
             values="estimated_support",
             aggregate_function="first",
-        ).with_columns(pl.struct(["ip", "omp"]).apply(lambda x: iou(x["ip"], x["omp"])).alias("iou"))
+        ).with_columns(pl.struct(["ip", "omp"]).map_elements(lambda x: iou(x["ip"], x["omp"])).alias("iou"))
 
         df = (
             df.join(pivot_table, on=["trial", "iter"])
@@ -348,6 +353,17 @@ def get_settings(
     return settings, num_settings, experiment_numbers
 
 
+def device_callback(value: Device) -> Device:
+    """
+    Handle potential issues when running on GPU.
+    """
+    if value == Device.cuda and GPUStatCollection is None:
+        raise typer.BadParameter("Device set to CUDA, but gpustat is not installed.")
+    elif value == Device.cuda and not torch.cuda.is_available():
+        raise typer.BadParameter("Device set to CUDA, but CUDA is not available.")
+    return value
+
+
 def main(
     results_dir: Path = typer.Argument(..., help="Where to save the results."),
     problem_size: ProblemSize = typer.Option(
@@ -366,6 +382,7 @@ def main(
     device: Device = typer.Option(
         default=Device.cuda if DEVICE == "cuda" else Device.cpu,
         help="Device to use (CPU/GPU).",
+        callback=device_callback,
     ),
     memory_usage: float = typer.Option(
         default=0.75,
@@ -383,7 +400,15 @@ def main(
         default=OrderBy.utilization,
         help="How to sort available GPUs when launching subprocesses.",
     ),
+    test: bool = typer.Option(
+        default=False,
+        help="Whether to run in test mode (five trials of each setting) to check simulations run properly.",
+    ),
 ) -> None:
+    if test:
+        global TRIALS
+        TRIALS = 5
+
     mp.set_start_method("spawn")
     if results_dir.exists() and not overwrite:
         FileExistsError(
