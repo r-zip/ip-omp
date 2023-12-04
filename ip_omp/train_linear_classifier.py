@@ -55,17 +55,9 @@ def get_model(dataset_name):
         return  LogisticRegression(n_inputs=4523, n_outputs=1000)
 
 
-model = get_model(dataset_name)
-model.to(device)
 
-# defining the optimizer
-optimizer = torch.optim.SGD(model.parameters(), lr=1.0, momentum=0.9)
-
-# defining Cross-Entropy loss
-criterion = torch.nn.CrossEntropyLoss()
-
-def train(dataset):
-    batch_size = 1024
+def train(dataset, bs):
+    batch_size = bs
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
     model.train()
@@ -89,7 +81,7 @@ def train(dataset):
 
     return loss.item()
 
-def test(dataset):
+def test(dataset, bs):
     batch_size = 1024
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
@@ -106,43 +98,53 @@ def test(dataset):
         predicted = torch.argmax(outputs.data, 1)
         correct += (predicted == y).sum()
     accuracy = 100 * (correct.item()) / len(dataset)
-    # scheduler.step()
+    
     return accuracy
 
 sparsity_level = None
 
-def main():
+def main(dataset, sparsity_level, bs):
 
-    for i in range(sparsity_level, 209):
-        datax = torch.tensor(np.load(f"saved_files/{dataset}_train_coeff_{str(i)}.npy", mmap_mode='r'))
-        datay = torch.tensor(np.load(f"saved_files/{dataset}_train_labels_{str(i)}.npy", mmap_mode='r'))
+        datax = torch.tensor(np.load(f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy", mmap_mode='r'))
+        datay = torch.tensor(np.load(f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy", mmap_mode='r'))
 
         train_ds = torch.utils.data.TensorDataset(datax, datay)
 
-        datax_test = torch.tensor(np.load(f"saved_files/{dataset}_test_coeff_{str(i)}.npy", mmap_mode='r'))
-        datay_test = torch.tensor(np.load(f"saved_files/{dataset}_test_labels_{str(i)}.npy", mmap_mode='r'))
+        datax_test = torch.tensor(np.load(f"saved_files/{dataset}_test_coeff_{sparsity_level}.npy", mmap_mode='r'))
+        datay_test = torch.tensor(np.load(f"saved_files/{dataset}_test_labels_{sparsity_level}.npy", mmap_mode='r'))
 
         test_ds = torch.utils.data.TensorDataset(datax_test, datay_test)
 
         iter = 0
 
         while(True):
-            loss = train(train_ds)
-            acc = test(test_ds)
+            loss = train(train_ds, bs)
+            acc = test(test_ds, bs)
 
-            print ("index:", i, "Epoch:", iter, "Train Loss:", loss, "Test accuracy:", acc)
+            print ("Epoch:", iter, "Train Loss:", loss, "Test accuracy:", acc)
             iter += 1
 
             if iter >= 1000:
                 break
-        torch.save(model, f"saved_files/{dataset}_model_{str(i)}.pt")
-        torch.save(optimizer, f"saved_files/{dataset}_optim_{str(i)}.pt")
-        break
+        torch.save(model, f"saved_files/{dataset}_model_{str(sparsity_level)}.pt")
+        torch.save(optimizer, f"saved_files/{dataset}_optim_{str(sparsity_level)}.pt")
 
-dataset = "cifar100"
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s','--sparsity_level', type=int)
+    parser.add_argument('-bs','--batch_size', type=int, default=1024)
+    parser.add_argument('-dataset','--dataset_name', type=str, choices=["imagenet", "places365", "cub", "cifar10", "cifar100"])
     args = parser.parse_args()
-    sparsity_level = args.sparsity_level
-    print ("sparsity level:", sparsity_level)
-    main()
+    
+
+    model = get_model(args.dataset_name)
+    model.to(device)
+
+    # defining the optimizer
+    optimizer = torch.optim.SGD(model.parameters(), lr=1.0, momentum=0.9)
+
+    # defining Cross-Entropy loss
+    criterion = torch.nn.CrossEntropyLoss()
+
+    main(args.dataset_name, args.sparsity_level, args.batch_size)
