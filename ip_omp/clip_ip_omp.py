@@ -15,16 +15,16 @@ import algorithms
 import pdb
 import util
 import clip
+import argparse
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/16", device=device)
-print (device)
 torch.set_num_threads(1)
 
 
-def get_sparse_code(dataset, dataset_name, dictionary, num_iterations):
+def get_sparse_code(dataset, dataset_name, dictionary, num_iterations, bs):
 
-    batch_size = 128
+    batch_size = bs
 
     with torch.no_grad():
         iteration = 0
@@ -70,8 +70,8 @@ def get_sparse_code(dataset, dataset_name, dictionary, num_iterations):
 
 
 
-def main():
-    dataset = "cifar100" #"imagenet" #"places365" #"cub" #cifar10
+def main(dataset_name, sparsity_level, bs):
+    dataset = dataset_name#"cifar100" #"imagenet" #"places365" #"cub" #cifar10
     train_ds, test_ds = util.get_data(preprocess, dataset)
 
     concepts = util.get_concepts("concept_sets/" + dataset + ".txt")
@@ -83,9 +83,22 @@ def main():
 
         dictionary = dictionary / torch.linalg.norm(dictionary, axis=0)
 
-        datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=10)
+        datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=10, bs=bs)
         
-    return datax, datay
+
+        np.save(f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy", datax)
+        np.save(f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy", datay)
+
+        datax_test, datay_test = get_sparse_code(test_ds, dataset, dictionary, num_iterations=10, bs=bs)
+
+        np.save(f"saved_files/{dataset}_test_coeff_{str(sparsity_level)}.npy", datax_test)
+        np.save(f"saved_files/{dataset}_test_labels_{str(sparsity_level)}.npy", datay_test)
+
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s','--sparsity_level', type=int) 
+    parser.add_argument('-bs','--batch_size', type=int, default=128) 
+    parser.add_argument('-dataset','--dataset_name', type=str, choices=["imagenet", "places365", "cub", "cifar10", "cifar100"])
+    args = parser.parse_args()
+    main(args.dataset_name, args.sparsity_level, args.batch_size)

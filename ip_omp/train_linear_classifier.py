@@ -38,23 +38,28 @@ class LogisticRegression(torch.nn.Module):
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-# model = LogisticRegression(n_inputs=128, n_outputs=10) #for cifar
-model = LogisticRegression(n_inputs=824, n_outputs=100) #for cifar
-# model = LogisticRegression(n_inputs=2207, n_outputs=365)
-# model = LogisticRegression(n_inputs=4523, n_outputs=1000) #for imagenet
-# model = LogisticRegression(n_inputs=208, n_outputs=200) #for cub
+def get_model(dataset_name):
+    if dataset_name == "cifar10":
+        return LogisticRegression(n_inputs=128, n_outputs=10)
+    
+    elif dataset_name == "cifar100":
+        return LogisticRegression(n_inputs=824, n_outputs=100)
 
-# model = torch.load(f"saved_files/imagenet_model_80.pt")
+    elif dataset_name == "cub":
+        return LogisticRegression(n_inputs=208, n_outputs=200)
+    
+    elif dataset_name == "places365":
+        return LogisticRegression(n_inputs=2207,  n_outputs=365)
+
+    elif dataset_name == "imagenet":
+        return  LogisticRegression(n_inputs=4523, n_outputs=1000)
+
+
+model = get_model(dataset_name)
 model.to(device)
 
 # defining the optimizer
-# optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 optimizer = torch.optim.SGD(model.parameters(), lr=1.0, momentum=0.9)
-# scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1000, 2000, 3000, 4000], gamma=0.1)
-# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max')
-#
-# optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-# scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2000,3000,4000], gamma=0.1)
 
 # defining Cross-Entropy loss
 criterion = torch.nn.CrossEntropyLoss()
@@ -133,7 +138,6 @@ def main():
         torch.save(model, f"saved_files/{dataset}_model_{str(i)}.pt")
         torch.save(optimizer, f"saved_files/{dataset}_optim_{str(i)}.pt")
         break
-# Press the green button in the gutter to run the script.
 
 dataset = "cifar100"
 

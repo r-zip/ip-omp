@@ -1,6 +1,6 @@
 import os
 import tqdm
-
+import argparse
 import numpy as np
 import torch
 import clip
@@ -158,13 +158,16 @@ def clip_embedding(dataset, split="train", dataset_name=None):
                     save_path = os.path.join(save_dir, f'{filename}.npy')
                     np.save(save_path, image_features[i])
 
-def main():
-    dataset = "places365" #"places365" #"imagenet"
+def main(dataset):
     train_ds, test_ds = get_data(preprocess, dataset)
     clip_embedding(train_ds, "train", dataset_name=dataset)
     clip_embedding(test_ds, "val", dataset_name=dataset)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-dataset','--dataset_name', type=str, choices=["imagenet", "places365"])
+    args = parser.parse_args()
+
+    main(args.dataset_name)
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
