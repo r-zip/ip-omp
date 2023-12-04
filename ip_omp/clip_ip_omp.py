@@ -71,7 +71,7 @@ def get_sparse_code(dataset, dataset_name, dictionary, num_iterations):
 
 
 def main():
-    dataset = "cifar10" #"imagenet" #"places365" #"cub" #cifar10
+    dataset = "cifar100" #"imagenet" #"places365" #"cub" #cifar10
     train_ds, test_ds = util.get_data(preprocess, dataset)
 
     concepts = util.get_concepts("concept_sets/" + dataset + ".txt")
@@ -85,8 +85,7 @@ def main():
 
         datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=10)
         
-    pdb.set_trace()
-
+    return datax, datay
 
 if __name__ == '__main__':
     main()

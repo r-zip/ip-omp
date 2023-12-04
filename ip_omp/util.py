@@ -1,6 +1,9 @@
 import numpy as np
 import torchvision.transforms as transforms
 import torchvision
+import CUB_dataset
+import torch
+import custom_dataset
 
 def _get_scale(square: bool) -> float:
     return 10 if square else 20
@@ -31,10 +34,10 @@ def get_data(transform, dataset):
 
 
     if dataset == "places365":
-        train_ds = custom_dataset.Places365_clip(root='/cis/project/vision_sequences/Places365', split="train-standard", small=True,
+        train_ds = custom_dataset.Places365_clip(root='data/Places365', split="train-standard", small=True,
                                                 download=False, transform=transform)
 
-        test_ds = custom_dataset.Places365_clip(root='/cis/project/vision_sequences/Places365', split="val", small=True,
+        test_ds = custom_dataset.Places365_clip(root='data/Places365', split="val", small=True,
                                                download=False, transform=transform)
 
 
@@ -60,7 +63,7 @@ def get_data(transform, dataset):
         no_img = False
         uncertain_label = False
         n_class_atr = 1
-        data_dir = "data"
+        data_dir = "/cis/home/achatto1/semantic-OMP/data"
         image_dir = f"{data_dir}/CUB/CUB_200_2011"
         no_label = False
         prune = False
