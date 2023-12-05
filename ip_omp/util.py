@@ -20,13 +20,13 @@ def ratio_to_db(ratio: float, square: bool = True) -> float:
 def get_data(transform, dataset):
     if dataset == "imagenet":
         train_ds = torchvision.datasets.DatasetFolder(
-            os.path.join('./data/ImageNet/train'),
+            os.path.join('./data/ImageNet_clip/train'),
             loader=lambda path: np.load(path, allow_pickle=True),
             is_valid_file=lambda path: path[-4:] == '.npy',
         )
 
         test_ds = torchvision.datasets.DatasetFolder(
-            os.path.join('./data/ImageNet/val'),
+            os.path.join('./data/ImageNet_clip/val'),
             loader=lambda path: np.load(path, allow_pickle=True),
             is_valid_file=lambda path: path[-4:] == '.npy',
         )
@@ -63,7 +63,7 @@ def get_data(transform, dataset):
         no_img = False
         uncertain_label = False
         n_class_atr = 1
-        data_dir = "/cis/home/achatto1/semantic-OMP/data"
+        data_dir = "data/"
         image_dir = f"{data_dir}/CUB/CUB_200_2011"
         no_label = False
         prune = False
