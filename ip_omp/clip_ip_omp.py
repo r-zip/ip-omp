@@ -5,15 +5,15 @@ os.system("export MKL_NUM_THREADS=4")
 os.system("export NUMEXPR_NUM_THREADS=4")
 os.system("export OMP_NUM_THREADS=4")
 
-import numpy as np
-import torch
-import tqdm
-from copy import copy
-import algorithms
-import pdb
-import util
-import clip
-import argparse
+import argparse  # noqa: E402
+
+import clip  # noqa: E402
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+import tqdm  # noqa: E402
+import util  # noqa: E402
+
+from . import algorithms  # noqa: E402
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/16", device=device)
@@ -21,21 +21,17 @@ torch.set_num_threads(1)
 
 
 def get_sparse_code(dataset, dataset_name, dictionary, num_iterations, bs):
-
     batch_size = bs
 
     with torch.no_grad():
         iteration = 0
-        dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=4
-        )
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
         datax = torch.empty((len(dataset), dictionary.shape[1]))
         datay = torch.empty((len(dataset)))
 
         element_index = 0
         for data in tqdm.tqdm(dataloader):
-
             # get the inputs; data is a list of [inputs, labels]
             if dataset_name == "cub":
                 image, labels, _ = data
@@ -47,9 +43,7 @@ def get_sparse_code(dataset, dataset_name, dictionary, num_iterations, bs):
 
             if dataset_name in ["cub", "cifar10", "cifar100"]:
                 image_features = model.encode_image(image).float()
-                image_features = image_features / torch.linalg.norm(
-                    image_features, axis=1
-                ).reshape(-1, 1)
+                image_features = image_features / torch.linalg.norm(image_features, axis=1).reshape(-1, 1)
             else:
                 image_features = image.clone()
 
@@ -68,9 +62,7 @@ def get_sparse_code(dataset, dataset_name, dictionary, num_iterations, bs):
                 device=device,
             )  # estimate_x(dictionary_batch, image_features, log["indices"])
 
-            datax[element_index : element_index + coeffs.size(0)] = (
-                coeffs.cpu().squeeze().clone()
-            )
+            datax[element_index : element_index + coeffs.size(0)] = coeffs.cpu().squeeze().clone()
             datay[element_index : element_index + coeffs.size(0)] = labels.cpu().clone()
 
             element_index = element_index + coeffs.size(0)
@@ -93,23 +85,15 @@ def main(dataset_name, sparsity_level, bs):
 
         dictionary = dictionary / torch.linalg.norm(dictionary, axis=0)
 
-        datax, datay = get_sparse_code(
-            train_ds, dataset, dictionary, num_iterations=10, bs=bs
-        )
+        datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=10, bs=bs)
 
         np.save(f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy", datax)
         np.save(f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy", datay)
 
-        datax_test, datay_test = get_sparse_code(
-            test_ds, dataset, dictionary, num_iterations=10, bs=bs
-        )
+        datax_test, datay_test = get_sparse_code(test_ds, dataset, dictionary, num_iterations=10, bs=bs)
 
-        np.save(
-            f"saved_files/{dataset}_test_coeff_{str(sparsity_level)}.npy", datax_test
-        )
-        np.save(
-            f"saved_files/{dataset}_test_labels_{str(sparsity_level)}.npy", datay_test
-        )
+        np.save(f"saved_files/{dataset}_test_coeff_{str(sparsity_level)}.npy", datax_test)
+        np.save(f"saved_files/{dataset}_test_labels_{str(sparsity_level)}.npy", datay_test)
 
 
 if __name__ == "__main__":

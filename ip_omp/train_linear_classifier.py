@@ -1,9 +1,8 @@
-import os
 import argparse
-import torch
-import pdb
-import tqdm
+
 import numpy as np
+import torch
+import tqdm
 
 torch.set_num_threads(1)
 
@@ -62,9 +61,7 @@ def get_model(dataset_name):
 
 def train(dataset, bs):
     batch_size = bs
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, shuffle=True, num_workers=4
-    )
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
     model.train()
     grad_norm = 0
@@ -90,9 +87,7 @@ def train(dataset, bs):
 
 def test(dataset, bs):
     batch_size = 1024
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, shuffle=True, num_workers=4
-    )
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
     model.eval()
     correct = 0
@@ -115,7 +110,6 @@ sparsity_level = None
 
 
 def main(dataset, sparsity_level, bs):
-
     datax = torch.tensor(
         np.load(
             f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy",
@@ -131,14 +125,8 @@ def main(dataset, sparsity_level, bs):
 
     train_ds = torch.utils.data.TensorDataset(datax, datay)
 
-    datax_test = torch.tensor(
-        np.load(f"saved_files/{dataset}_test_coeff_{sparsity_level}.npy", mmap_mode="r")
-    )
-    datay_test = torch.tensor(
-        np.load(
-            f"saved_files/{dataset}_test_labels_{sparsity_level}.npy", mmap_mode="r"
-        )
-    )
+    datax_test = torch.tensor(np.load(f"saved_files/{dataset}_test_coeff_{sparsity_level}.npy", mmap_mode="r"))
+    datay_test = torch.tensor(np.load(f"saved_files/{dataset}_test_labels_{sparsity_level}.npy", mmap_mode="r"))
 
     test_ds = torch.utils.data.TensorDataset(datax_test, datay_test)
 

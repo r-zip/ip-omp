@@ -2,15 +2,14 @@
 General utils for training, evaluation and data loading
 """
 import os
-import torch
 import pickle
-import numpy as np
-import torchvision.transforms as transforms
 
-from PIL import Image
+import numpy as np
+import torch
+import torchvision.transforms as transforms
 from cub_config import BASE_DIR, N_ATTRIBUTES
-from torch.utils.data import BatchSampler
-from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+from torch.utils.data import BatchSampler, DataLoader, Dataset
 
 
 class CUBDataset(Dataset):
@@ -35,7 +34,8 @@ class CUBDataset(Dataset):
         pkl_file_paths: list of full path to all the pkl data
         use_attr: whether to load the attributes (e.g. False for simple finetune)
         no_img: whether to load the images (e.g. False for A -> Y model)
-        uncertain_label: if True, use 'uncertain_attribute_label' field (i.e. label weighted by uncertainty score, e.g. 1 & 3(probably) -> 0.75)
+        uncertain_label: if True, use 'uncertain_attribute_label' field (i.e. label weighted by uncertainty score, e.g.
+            1 & 3(probably) -> 0.75)
         image_dir: default = 'images'. Will be append to the parent dir
         n_class_attr: number of classes to predict for each attribute. If 3, then make a separate class for not visible
         transform: whether to apply any special transformation. Default = None, i.e. use standard ImageNet preprocessing
@@ -239,19 +239,14 @@ class ImbalancedDatasetSampler(torch.utils.data.sampler.Sampler):
                 label_to_count[label] = 1
 
         # weight for each sample
-        weights = [
-            1.0 / label_to_count[self._get_label(dataset, idx)] for idx in self.indices
-        ]
+        weights = [1.0 / label_to_count[self._get_label(dataset, idx)] for idx in self.indices]
         self.weights = torch.DoubleTensor(weights)
 
     def _get_label(self, dataset, idx):  # Note: for single attribute dataset
         return dataset.data[idx]["attribute_label"][0]
 
     def __iter__(self):
-        idx = (
-            self.indices[i]
-            for i in torch.multinomial(self.weights, self.num_samples, replacement=True)
-        )
+        idx = (self.indices[i] for i in torch.multinomial(self.weights, self.num_samples, replacement=True))
         return idx
 
     def __len__(self):
@@ -271,38 +266,32 @@ def load_data(
 ):
     """
     Note: Inception needs (299,299,3) images with inputs scaled between -1 and 1
-    Loads data with transformations applied, and upsample the minority class if there is class imbalance and weighted loss is not used
+    Loads data with transformations applied, and upsample the minority class if there is class imbalance and weighted
+    loss is not used
+
     NOTE: resampling is customized for first attribute only, so change sampler.py if necessary
     """
-    resized_resol = int(resol * 256 / 224)
     is_training = any(["train.pkl" in f for f in pkl_paths])
     if is_training:
         transform = transforms.Compose(
             [
-                # transforms.Resize((resized_resol, resized_resol)),
-                # transforms.RandomSizedCrop(resol),
                 transforms.ColorJitter(brightness=32 / 255, saturation=(0.5, 1.5)),
                 transforms.RandomResizedCrop(resol),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),  # implicitly divides by 255
-                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[2, 2, 2])
-                # transforms.Normalize(mean = [ 0.485, 0.456, 0.406 ], std = [ 0.229, 0.224, 0.225 ]),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[2, 2, 2]),
             ]
         )
     else:
         transform = transforms.Compose(
             [
-                # transforms.Resize((resized_resol, resized_resol)),
                 transforms.CenterCrop(resol),
                 transforms.ToTensor(),  # implicitly divides by 255
-                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[2, 2, 2])
-                # transforms.Normalize(mean = [ 0.485, 0.456, 0.406 ], std = [ 0.229, 0.224, 0.225 ]),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[2, 2, 2]),
             ]
         )
 
-    dataset = CUBDataset(
-        pkl_paths, use_attr, no_img, uncertain_label, image_dir, n_class_attr, transform
-    )
+    dataset = CUBDataset(pkl_paths, use_attr, no_img, uncertain_label, image_dir, n_class_attr, transform)
     if is_training:
         drop_last = True
         shuffle = True
@@ -317,9 +306,7 @@ def load_data(
         )
         loader = DataLoader(dataset, batch_sampler=sampler)
     else:
-        loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last
-        )
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last)
     return loader
 
 
@@ -327,7 +314,8 @@ def find_class_imbalance(pkl_file, multiple_attr=False, attr_idx=-1):
     """
     Calculate class imbalance ratio for binary attribute labels stored in pkl_file
     If attr_idx >= 0, then only return ratio for the corresponding attribute id
-    If multiple_attr is True, then return imbalance ratio separately for each attribute. Else, calculate the overall imbalance across all attributes
+    If multiple_attr is True, then return imbalance ratio separately for each attribute. Else, calculate the overall
+    imbalance across all attributes
     """
     imbalance_ratio = []
     data = pickle.load(open(os.path.join(BASE_DIR, pkl_file), "rb"))

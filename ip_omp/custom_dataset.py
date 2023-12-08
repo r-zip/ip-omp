@@ -1,16 +1,17 @@
-import torchvision.datasets as datasets
 import os
-import torch
+
 import numpy as np
+import torch
+import torchvision.datasets as datasets
 
 
 class Places365_clip(datasets.Places365):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.small and self.split == "train-standard":
-            self.attr_dir = os.path.join(f"./data/Places365_clip/train-standard/")
+            self.attr_dir = os.path.join("./data/Places365_clip/train-standard/")
         elif self.small and self.split == "val":
-            self.attr_dir = os.path.join(f"./data/Places365_clip/val_256/")
+            self.attr_dir = os.path.join("./data/Places365_clip/val_256/")
 
     def __getitem__(self, idx):
         label = self.imgs[idx][1]

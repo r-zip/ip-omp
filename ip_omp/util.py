@@ -1,9 +1,10 @@
-import numpy as np
-import torchvision.transforms as transforms
-import torchvision
+import os
+
 import CUB_dataset
-import torch
 import custom_dataset
+import numpy as np
+import torch
+import torchvision
 
 
 def _get_scale(square: bool) -> float:
@@ -50,35 +51,12 @@ def get_data(transform, dataset):
         )
 
     if dataset == "cifar10":
-        classes = (
-            "plane",
-            "car",
-            "bird",
-            "cat",
-            "deer",
-            "dog",
-            "frog",
-            "horse",
-            "ship",
-            "truck",
-        )
-
-        train_ds = torchvision.datasets.CIFAR10(
-            root="./data", train=True, download=True, transform=transform
-        )
-
-        test_ds = torchvision.datasets.CIFAR10(
-            root="./data", train=False, download=True, transform=transform
-        )
+        train_ds = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
+        test_ds = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
 
     if dataset == "cifar100":
-        train_ds = torchvision.datasets.CIFAR100(
-            root="./data", train=True, download=False, transform=transform
-        )
-
-        test_ds = torchvision.datasets.CIFAR100(
-            root="./data", train=False, download=False, transform=transform
-        )
+        train_ds = torchvision.datasets.CIFAR100(root="./data", train=True, download=False, transform=transform)
+        test_ds = torchvision.datasets.CIFAR100(root="./data", train=False, download=False, transform=transform)
 
     elif dataset == "cub":
         use_attr = True

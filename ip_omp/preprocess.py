@@ -1,18 +1,12 @@
-import os
-import tqdm
 import argparse
+import os
+
+import clip
+import CUB_dataset
 import numpy as np
 import torch
-import clip
-import pdb
-from PIL import Image
 import torchvision
-
-from copy import copy
-from collections import defaultdict
-import torchvision.transforms as transforms
-import sys
-import CUB_dataset
+import tqdm
 
 torch.set_num_threads(1)
 
@@ -40,45 +34,16 @@ def get_data(transform, dataset):
 
     if dataset == "imagenet":
         data_dir = "./data/ImageNet"
-
-        train_ds = torchvision.datasets.ImageFolder(
-            f"{data_dir}/train/", transform=preprocess
-        )
-
-        test_ds = torchvision.datasets.ImageFolder(
-            f"{data_dir}/val/", transform=preprocess
-        )
+        train_ds = torchvision.datasets.ImageFolder(f"{data_dir}/train/", transform=preprocess)
+        test_ds = torchvision.datasets.ImageFolder(f"{data_dir}/val/", transform=preprocess)
 
     if dataset == "cifar10":
-        classes = (
-            "plane",
-            "car",
-            "bird",
-            "cat",
-            "deer",
-            "dog",
-            "frog",
-            "horse",
-            "ship",
-            "truck",
-        )
-
-        train_ds = torchvision.datasets.CIFAR10(
-            root="./data", train=True, download=True, transform=transform
-        )
-
-        test_ds = torchvision.datasets.CIFAR10(
-            root="./data", train=False, download=True, transform=transform
-        )
+        train_ds = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
+        test_ds = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
 
     if dataset == "cifar100":
-        train_ds = torchvision.datasets.CIFAR100(
-            root="./data", train=True, download=False, transform=transform
-        )
-
-        test_ds = torchvision.datasets.CIFAR100(
-            root="./data", train=False, download=False, transform=transform
-        )
+        train_ds = torchvision.datasets.CIFAR100(root="./data", train=True, download=False, transform=transform)
+        test_ds = torchvision.datasets.CIFAR100(root="./data", train=False, download=False, transform=transform)
 
     elif dataset == "cub":
         use_attr = True
@@ -136,9 +101,7 @@ def clip_embedding(dataset, split="train", dataset_name=None):
 
     with torch.no_grad():
         iteration = 0
-        dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=bs, shuffle=False, num_workers=4
-        )
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=bs, shuffle=False, num_workers=4)
 
         print(dataset_name)
 
@@ -146,15 +109,13 @@ def clip_embedding(dataset, split="train", dataset_name=None):
             start_i, end_i = batch_i * bs, (batch_i + 1) * bs
 
             if dataset_name == "cub":
-                image, labels, _ = data
+                image, _, _ = data
             else:
-                image, labels = data
+                image, _ = data
             image = image.to(device)
 
             image_features = model.encode_image(image).float()
-            image_features = image_features / torch.linalg.norm(
-                image_features, axis=1
-            ).reshape(-1, 1)
+            image_features = image_features / torch.linalg.norm(image_features, axis=1).reshape(-1, 1)
 
             image_features = image_features.cpu().numpy()
             iteration += 1
@@ -170,7 +131,7 @@ def clip_embedding(dataset, split="train", dataset_name=None):
                         save_dir = f"./data/Places365_clip/train-standard/{alphabet}/{class_name}"
                     elif split == "val":
                         filename = img_path.split("/")[-1][:-4]
-                        save_dir = f"./data/Places365_clip/val_256/"
+                        save_dir = "./data/Places365_clip/val_256/"
                     else:
                         raise NameError(f"split not found: {split}")
                     os.makedirs(save_dir, exist_ok=True)
@@ -196,11 +157,7 @@ def main(dataset):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-dataset", "--dataset_name", type=str, choices=["imagenet", "places365"]
-    )
+    parser.add_argument("-dataset", "--dataset_name", type=str, choices=["imagenet", "places365"])
     args = parser.parse_args()
 
     main(args.dataset_name)
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
