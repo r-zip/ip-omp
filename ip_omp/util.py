@@ -5,6 +5,7 @@ import CUB_dataset
 import torch
 import custom_dataset
 
+
 def _get_scale(square: bool) -> float:
     return 10 if square else 20
 
@@ -20,43 +21,64 @@ def ratio_to_db(ratio: float, square: bool = True) -> float:
 def get_data(transform, dataset):
     if dataset == "imagenet":
         train_ds = torchvision.datasets.DatasetFolder(
-            os.path.join('./data/ImageNet_clip/train'),
+            os.path.join("./data/ImageNet_clip/train"),
             loader=lambda path: np.load(path, allow_pickle=True),
-            is_valid_file=lambda path: path[-4:] == '.npy',
+            is_valid_file=lambda path: path[-4:] == ".npy",
         )
 
         test_ds = torchvision.datasets.DatasetFolder(
-            os.path.join('./data/ImageNet_clip/val'),
+            os.path.join("./data/ImageNet_clip/val"),
             loader=lambda path: np.load(path, allow_pickle=True),
-            is_valid_file=lambda path: path[-4:] == '.npy',
+            is_valid_file=lambda path: path[-4:] == ".npy",
         )
 
-
-
     if dataset == "places365":
-        train_ds = custom_dataset.Places365_clip(root='data/Places365', split="train-standard", small=True,
-                                                download=False, transform=transform)
+        train_ds = custom_dataset.Places365_clip(
+            root="data/Places365",
+            split="train-standard",
+            small=True,
+            download=False,
+            transform=transform,
+        )
 
-        test_ds = custom_dataset.Places365_clip(root='data/Places365', split="val", small=True,
-                                               download=False, transform=transform)
-
+        test_ds = custom_dataset.Places365_clip(
+            root="data/Places365",
+            split="val",
+            small=True,
+            download=False,
+            transform=transform,
+        )
 
     if dataset == "cifar10":
-        classes = ('plane', 'car', 'bird', 'cat',
-                   'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+        classes = (
+            "plane",
+            "car",
+            "bird",
+            "cat",
+            "deer",
+            "dog",
+            "frog",
+            "horse",
+            "ship",
+            "truck",
+        )
 
-        train_ds = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                                download=True, transform=transform)
+        train_ds = torchvision.datasets.CIFAR10(
+            root="./data", train=True, download=True, transform=transform
+        )
 
-        test_ds = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                               download=True, transform=transform)
+        test_ds = torchvision.datasets.CIFAR10(
+            root="./data", train=False, download=True, transform=transform
+        )
 
     if dataset == "cifar100":
-        train_ds = torchvision.datasets.CIFAR100(root='./data', train=True,
-                                                download=False, transform=transform)
+        train_ds = torchvision.datasets.CIFAR100(
+            root="./data", train=True, download=False, transform=transform
+        )
 
-        test_ds = torchvision.datasets.CIFAR100(root='./data', train=False,
-                                               download=False, transform=transform)
+        test_ds = torchvision.datasets.CIFAR100(
+            root="./data", train=False, download=False, transform=transform
+        )
 
     elif dataset == "cub":
         use_attr = True
@@ -117,27 +139,3 @@ def get_concepts(filename):
         list_of_concepts.append(line.strip())
 
     return list_of_concepts
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

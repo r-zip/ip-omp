@@ -16,8 +16,12 @@ class BaseEnum(str, Enum):
 class CoeffDistribution(BaseEnum):
     """Distribution of the sparse code."""
 
-    sparse_gaussian = "sparse_gaussian"  # sparse Gaussian coeff. distribution (normal on support)
-    sparse_const = "sparse_const"  # sparse constant coeff. distribution (= 1 on support)
+    sparse_gaussian = (
+        "sparse_gaussian"  # sparse Gaussian coeff. distribution (normal on support)
+    )
+    sparse_const = (
+        "sparse_const"  # sparse constant coeff. distribution (= 1 on support)
+    )
 
 
 class Device(BaseEnum):

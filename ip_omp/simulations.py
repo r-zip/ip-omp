@@ -42,7 +42,9 @@ from .constants import (
 from .metrics import iou, mse, mutual_coherence, precision, recall
 from .util import db_to_ratio
 
-logging.basicConfig(level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
+logging.basicConfig(
+    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+)
 logger = logging.getLogger()
 
 DTYPE = torch.float64
@@ -55,14 +57,19 @@ def get_gpus(
 ) -> list[int]:
     gpus = GPUStatCollection.new_query()
     free_gpus = [
-        g for g in gpus if (g.utilization < utilization * 100) and (g.memory_used / g.memory_total < memory_usage)
+        g
+        for g in gpus
+        if (g.utilization < utilization * 100)
+        and (g.memory_used / g.memory_total < memory_usage)
     ]
 
     free_gpus = sorted(free_gpus, key=attrgetter(str(order_by)))
     return [g.index for g in free_gpus]
 
 
-def gen_dictionary(batch_size: int, m: int, n: int, device: str | torch.device = DEVICE) -> torch.Tensor:
+def gen_dictionary(
+    batch_size: int, m: int, n: int, device: str | torch.device = DEVICE
+) -> torch.Tensor:
     Phi = torch.randn(batch_size, m, n, device=device)
     return Phi / torch.linalg.norm(Phi, dim=1)[:, None, :]
 
@@ -105,7 +112,12 @@ def generate_measurements_and_coeffs(
             torch.zeros(n - s, device=device, dtype=torch.bool),
         ]
     )
-    supp = torch.vstack([bool_index[torch.randperm(n, device=device)].clone() for _ in range(batch_size)])[:, :, None]
+    supp = torch.vstack(
+        [
+            bool_index[torch.randperm(n, device=device)].clone()
+            for _ in range(batch_size)
+        ]
+    )[:, :, None]
     if coeff_distribution == CoeffDistribution.sparse_gaussian:
         values = torch.randn(batch_size * s, device=device)
     elif coeff_distribution == CoeffDistribution.sparse_const:
@@ -160,7 +172,9 @@ def compute_metrics(
         nnz = len(support)
         norm_x = torch.linalg.norm(x).item()
         norm_y = torch.linalg.norm(y).item()
-        for iter, (objective_t, x_hat_t, y_hat_t) in enumerate(zip(objective, x_hat, y_hat)):
+        for iter, (objective_t, x_hat_t, y_hat_t) in enumerate(
+            zip(objective, x_hat, y_hat)
+        ):
             metrics_now = {
                 "trial": trial,
                 "iter": iter,
@@ -208,7 +222,11 @@ def run_experiment(
     torch.set_num_threads(4)
 
     if device_type == Device.cuda:
-        while not (gpus := get_gpus(utilization=utilization, memory_usage=memory_usage, order_by=order_by)):
+        while not (
+            gpus := get_gpus(
+                utilization=utilization, memory_usage=memory_usage, order_by=order_by
+            )
+        ):
             logger.info("Waiting for available GPU...")
             sleep(1)
 
@@ -222,7 +240,9 @@ def run_experiment(
     experiment_results_dir.mkdir(exist_ok=True)
 
     with torch.no_grad():
-        logger.info(f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}")
+        logger.info(
+            f"Generating dictionary, signal, and measurement with dimensions {m=}, {n=}"
+        )
         Phi = gen_dictionary(TRIALS, m, n, device=device)
 
         torch.save(Phi, experiment_results_dir / "Phi.pt")
@@ -257,7 +277,9 @@ def run_experiment(
         metrics_omp = compute_metrics(log_omp, true_support, x, y, Phi, "omp")
 
         logger.info("Combining metrics")
-        df = pl.concat([pl.DataFrame(metrics_ip), pl.DataFrame(metrics_omp)], how="vertical")
+        df = pl.concat(
+            [pl.DataFrame(metrics_ip), pl.DataFrame(metrics_omp)], how="vertical"
+        )
 
         # compute iou
         pivot_table = df.pivot(
@@ -265,7 +287,11 @@ def run_experiment(
             columns="algorithm",
             values="estimated_support",
             aggregate_function="first",
-        ).with_columns(pl.struct(["ip", "omp"]).map_elements(lambda x: iou(x["ip"], x["omp"])).alias("iou"))
+        ).with_columns(
+            pl.struct(["ip", "omp"])
+            .map_elements(lambda x: iou(x["ip"], x["omp"]))
+            .alias("iou")
+        )
 
         df = (
             df.join(pivot_table, on=["trial", "iter"])
@@ -377,8 +403,12 @@ def main(
     noise_setting: NoiseSetting = typer.Option(
         default=NoiseSetting.noiseless, help="The noise setting of the experiment."
     ),
-    overwrite: bool = typer.Option(default=False, help="Whether to overwrite existing results."),
-    jobs: int = typer.Option(default=1, min=1, help="Maximum number of subprocesses to run."),
+    overwrite: bool = typer.Option(
+        default=False, help="Whether to overwrite existing results."
+    ),
+    jobs: int = typer.Option(
+        default=1, min=1, help="Maximum number of subprocesses to run."
+    ),
     device: Device = typer.Option(
         default=Device.cuda if DEVICE == "cuda" else Device.cpu,
         help="Device to use (CPU/GPU).",
@@ -415,7 +445,9 @@ def main(
             f"Results directory {results_dir.absolute()} exists. Please specify a different directory or --overwrite."
         )
 
-    settings, num_settings, experiment_numbers = get_settings(problem_size, coeff_distribution, noise_setting)
+    settings, num_settings, experiment_numbers = get_settings(
+        problem_size, coeff_distribution, noise_setting
+    )
 
     if device == Device.cuda:
         workers = min(

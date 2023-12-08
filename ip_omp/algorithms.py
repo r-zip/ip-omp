@@ -46,7 +46,9 @@ def estimate_x_lsq(
     if indices is None:
         return torch.zeros(Phi.shape[0], Phi.shape[2], 1, device=device)
 
-    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape((-1, 1))
+    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(
+        (-1, 1)
+    )
 
     Phi_t = Phi[batches, :, indices].transpose(1, 2)
 
@@ -78,16 +80,22 @@ def ip_objective(
     if columns is None:
         columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     if batches is None:
-        batches = batches or torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(-1, 1)
+        batches = batches or torch.arange(
+            Phi.shape[0], dtype=torch.long, device=device
+        ).reshape(-1, 1)
 
     if columns.size(1) == 0:
         Phi_projected = Phi.clone()  # this is project onto orthogonal complement
 
     else:
         Phi_coeff = estimate_x_lsq(Phi, Phi, columns)
-        Phi_projected = Phi - (Phi @ Phi_coeff)  # this is projection onto orthogonal complement
+        Phi_projected = Phi - (
+            Phi @ Phi_coeff
+        )  # this is projection onto orthogonal complement
 
-    Phi_projected_normalized = Phi_projected / torch.linalg.norm(Phi_projected, dim=1)[:, None, :]
+    Phi_projected_normalized = (
+        Phi_projected / torch.linalg.norm(Phi_projected, dim=1)[:, None, :]
+    )
     objective = torch.abs(Phi_projected_normalized.transpose(1, 2) @ y)
 
     objective[batches, columns] = -np.inf
@@ -99,14 +107,18 @@ def ip(
     y: torch.Tensor,
     num_iterations: int | None = None,
     device: str | torch.device = DEVICE,
-    compute_xhat = True
+    compute_xhat=True,
 ) -> dict:
     log = defaultdict(list)
-    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape((-1, 1))
+    batches = torch.arange(Phi.shape[0], dtype=torch.long, device=device).reshape(
+        (-1, 1)
+    )
     columns = torch.empty(Phi.shape[0], 0, dtype=torch.long, device=device)
     for k in range(num_iterations):
         logger.debug(f"IP iteration {k} / {num_iterations}")
-        objective = ip_objective(Phi, y, batches=batches, columns=columns, device=device)
+        objective = ip_objective(
+            Phi, y, batches=batches, columns=columns, device=device
+        )
         max_objective = objective.max(dim=1).values
         logger.debug(f"IP iteration {k}, max objective = {max_objective.max().item()}")
 

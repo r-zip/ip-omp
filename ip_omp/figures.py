@@ -28,14 +28,23 @@ METRIC_NAME_LOOKUP = {
 app = typer.Typer()
 
 
-def filter_df(df: pl.DataFrame, algorithm: Literal["ip", "omp", None] = None) -> pl.DataFrame:
+def filter_df(
+    df: pl.DataFrame, algorithm: Literal["ip", "omp", None] = None
+) -> pl.DataFrame:
     if algorithm:
         df = df.filter(c("algorithm") == algorithm)
-    df = df.with_columns(c("iter").max().over(["experiment_number", "trial", "algorithm"]).alias("max_iter"))
+    df = df.with_columns(
+        c("iter")
+        .max()
+        .over(["experiment_number", "trial", "algorithm"])
+        .alias("max_iter")
+    )
     return df.filter(c("iter") == c("max_iter"))
 
 
-def get_phase_transition_data(df: pl.DataFrame, algorithm: Literal["ip", "omp"]) -> pl.DataFrame:
+def get_phase_transition_data(
+    df: pl.DataFrame, algorithm: Literal["ip", "omp"]
+) -> pl.DataFrame:
     df_pt = (
         # filter to only the last iteration
         filter_df(df, algorithm=algorithm)
@@ -273,14 +282,22 @@ def plot_metric_curves_noisy(
 
 @app.command()
 def plot_noiseless(
-    small_result_path: Path = typer.Argument(..., help="Path to the small (n=256) results file."),
-    large_result_path: Path = typer.Argument(..., help="Path to the large (n=1024) results file."),
+    small_result_path: Path = typer.Argument(
+        ..., help="Path to the small (n=256) results file."
+    ),
+    large_result_path: Path = typer.Argument(
+        ..., help="Path to the large (n=1024) results file."
+    ),
     coeff_distribution: CoeffDistribution = typer.Option(
         default=CoeffDistribution.sparse_gaussian,
         help="The distribution of the coefficients of the sparse code.",
     ),
-    save_dir: Path = typer.Option(default=Path("."), help="Where to save resulting plots."),
-    save_file_format: SaveFileFormat = typer.Option(default=SaveFileFormat.png, help="Format of the plot file."),
+    save_dir: Path = typer.Option(
+        default=Path("."), help="Where to save resulting plots."
+    ),
+    save_file_format: SaveFileFormat = typer.Option(
+        default=SaveFileFormat.png, help="Format of the plot file."
+    ),
     together: bool = typer.Option(
         default=False,
         help="Whether to plot small (n=256) and large (n=1024) results in the same figure.",
@@ -310,25 +327,36 @@ def plot_noiseless(
         plot_metric_curves(
             df_small,
             df_large,
-            save_file=save_dir / f"noiseless_recovery_{str(coeff_distribution)}.{str(save_file_format)}",
+            save_file=save_dir
+            / f"noiseless_recovery_{str(coeff_distribution)}.{str(save_file_format)}",
         )
     else:
         plot_probability_curve(
             df_small,
-            save_file=save_dir / f"noiseless_recovery_{str(coeff_distribution)}_small.{str(save_file_format)}",
+            save_file=save_dir
+            / f"noiseless_recovery_{str(coeff_distribution)}_small.{str(save_file_format)}",
         )
         plot_probability_curve(
             df_large,
-            save_file=save_dir / f"noiseless_recovery_{str(coeff_distribution)}_large.{str(save_file_format)}",
+            save_file=save_dir
+            / f"noiseless_recovery_{str(coeff_distribution)}_large.{str(save_file_format)}",
         )
 
 
 @app.command()
 def plot_noisy(
-    small_result_path: Path = typer.Argument(..., help="Path to the small (n=256) results file."),
-    large_result_path: Path = typer.Argument(..., help="Path to the large (n=1024) results file."),
-    save_dir: Path = typer.Option(default=Path("."), help="Where to save resulting plots."),
-    save_file_format: SaveFileFormat = typer.Option(default=SaveFileFormat.png, help="Format of the plot file."),
+    small_result_path: Path = typer.Argument(
+        ..., help="Path to the small (n=256) results file."
+    ),
+    large_result_path: Path = typer.Argument(
+        ..., help="Path to the large (n=1024) results file."
+    ),
+    save_dir: Path = typer.Option(
+        default=Path("."), help="Where to save resulting plots."
+    ),
+    save_file_format: SaveFileFormat = typer.Option(
+        default=SaveFileFormat.png, help="Format of the plot file."
+    ),
 ):
     """Plot the results of the noisy sparse recovery experiments."""
     sns.set()
