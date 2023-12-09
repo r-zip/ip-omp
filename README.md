@@ -1,5 +1,5 @@
 # Information Maximization Perspective of Orthogonal Matching Pursuit with Applications to Explainable AI
-**Aditya Chattopadhyay¹, Ryan Pilgrim¹, and René Vidal²** <br>
+**Aditya Chattopadhyay,¹ Ryan Pilgrim,¹ and René Vidal²** <br>
 
 **¹Johns Hopkins University, USA, `{achatto1,rpilgri1} <at> jhu.edu`**
 
