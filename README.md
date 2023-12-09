@@ -25,6 +25,8 @@ If on Linux, type
 ```
 conda env create -f environment_linux.yml
 ```
+Once this command has finished, you can activate the environment with `conda activate`.
+
 Windows is currently not supported.
 
 ## Sparse Recovery Experiments
