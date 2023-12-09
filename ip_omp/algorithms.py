@@ -3,7 +3,8 @@ from collections import defaultdict
 
 import numpy as np
 import torch
-from constants import DEVICE
+
+from .constants import DEVICE
 
 logger = logging.getLogger(__name__)
 
