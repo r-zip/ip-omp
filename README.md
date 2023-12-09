@@ -21,7 +21,7 @@ conda env create -f environment_mac.yml
 ```
 If on Linux, type
 ```
-conda env create -f environment_mac.yml
+conda env create -f environment_linux.yml
 ```
 Windows is currently not supported.
 
