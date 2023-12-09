@@ -7,14 +7,7 @@ import polars as pl
 import seaborn as sns
 import typer
 
-from .constants import (
-    MAX_M,
-    CoeffDistribution,
-    NoiseSetting,
-    ProblemSize,
-    SaveFileFormat,
-    SNRs,
-)
+from .constants import MAX_M, CoeffDistribution, NoiseSetting, ProblemSize, SaveFileFormat, SNRs
 
 c = pl.col
 
