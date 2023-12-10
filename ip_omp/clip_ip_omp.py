@@ -6,6 +6,7 @@ os.system("export NUMEXPR_NUM_THREADS=4")
 os.system("export OMP_NUM_THREADS=4")
 
 import argparse  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 import clip  # noqa: E402
 import numpy as np  # noqa: E402
@@ -76,7 +77,7 @@ def main(dataset_name, sparsity_level, bs):
     dataset = dataset_name  # "cifar100" #"imagenet" #"places365" #"cub" #cifar10
     train_ds, test_ds = util.get_data(preprocess, dataset)
 
-    concepts = util.get_concepts("concept_sets/" + dataset + ".txt")
+    concepts = util.get_concepts(Path(__file__) / ("concept_sets/" + dataset + ".txt"))
     text = clip.tokenize(concepts).to(device)
 
     with torch.no_grad():
