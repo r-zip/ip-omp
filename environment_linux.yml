@@ -2,7 +2,9 @@ name: ip-omp
 channels:
   - defaults
   - pytorch
+  - nvidia
 dependencies:
+  - pytorch-cuda=11.8   
   - gpustat=0.6.0
   - matplotlib=3.8.0
   - numpy=1.26.2
