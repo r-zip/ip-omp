@@ -189,7 +189,7 @@ CUB200 - refer to instructions at https://www.vision.caltech.edu/datasets/cub_20
 
 The code for CLIP-IP-OMP algorithm is provided in the file clip_ip_omp.py. The code process the entire training and test set for the input dataset and saves the IP-OMP code for each image into a .npy file in the saved_files directory.
 
-Usage: python clip_ip_omp.py -s {sparsity level} -bs {batch size} -dataset {dataset name}
+Usage: python -m ip_omp.clip_ip_omp -s {sparsity level} -bs {batch size} -dataset {dataset name}
 
 1. sparisty level (integer) is the desired number of non-zero coefficients in the sparse code. This controls the complexity of the explanations.
 2. batch-size (integer) is the number of images to process in one batch. Default value is 128.
@@ -197,7 +197,7 @@ Usage: python clip_ip_omp.py -s {sparsity level} -bs {batch size} -dataset {data
 
 Due to the large size of the Imagenet and Places365 dataset. We first preprocess every image in the dataset to obtain their corresponding CLIP image features. This is done via the preprocess.py code. Run this code before running clip_ip_omp.py for these dataset.
 
-Usage: python preprocess.py -dataset {dataset name}
+Usage: python -m ip_omp.preprocess -dataset {dataset name}
 
 1. dataset name is a value from the set {"imagenet", "places365"}
 
@@ -205,7 +205,7 @@ Usage: python preprocess.py -dataset {dataset name}
 
 This is done using the train_linear_classifier.py code. Run this after running the clip_ip_omp.py code. 
 
-Usage: python train_linear_classifier.py -s {sparsity level} -bs {batch size} -dataset {dataset name}
+Usage: python -m ip_omp.train_linear_classifier -s {sparsity level} -bs {batch size} -dataset {dataset name}
 
 1. sparisty level (integer) is the sparsity level used while constructing the IP-OMP codes using the clip_ip_omp.py file.
 2. batch-size (integer) is the number of images to process in one batch. Default value is 128.
