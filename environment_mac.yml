@@ -8,7 +8,7 @@ dependencies:
   - pip=23.3.1
   - python=3.11
   - pytorch::pytorch=2.1.1
-  - torchvision
+  - torchvision=0.16.1
   - rich=13.3.5
   - seaborn=0.12.2
   - typer=0.9.0
