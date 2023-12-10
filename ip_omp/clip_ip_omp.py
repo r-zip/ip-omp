@@ -77,7 +77,7 @@ def main(dataset_name, sparsity_level, bs):
     dataset = dataset_name  # "cifar100" #"imagenet" #"places365" #"cub" #cifar10
     train_ds, test_ds = util.get_data(preprocess, dataset)
 
-    concepts = util.get_concepts(Path(__file__) / ("concept_sets/" + dataset + ".txt"))
+    concepts = util.get_concepts(Path(__file__).parent / ("concept_sets/" + dataset + ".txt"))
     text = clip.tokenize(concepts).to(device)
 
     with torch.no_grad():
