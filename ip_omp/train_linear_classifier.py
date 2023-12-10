@@ -145,7 +145,8 @@ def main(dataset, sparsity_level, bs):
         print("Epoch:", iter, "Train Loss:", loss, "Test accuracy:", acc)
         iter += 1
 
-        if iter >= 1000:
+        #        if iter >= 1000:
+        if iter >= 10:
             break
     torch.save(model, module_dir / f"saved_files/{dataset}_model_{str(sparsity_level)}.pt")
     torch.save(optimizer, module_dir / f"saved_files/{dataset}_optim_{str(sparsity_level)}.pt")
