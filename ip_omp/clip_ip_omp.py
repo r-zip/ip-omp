@@ -13,7 +13,7 @@ import torch  # noqa: E402
 import tqdm  # noqa: E402
 import util  # noqa: E402
 
-import algorithms  # noqa: E402
+from . import algorithms  # noqa: E402
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/16", device=device)
