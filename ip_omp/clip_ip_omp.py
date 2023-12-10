@@ -76,8 +76,9 @@ def get_sparse_code(dataset, dataset_name, dictionary, num_iterations, bs):
 def main(dataset_name, sparsity_level, bs):
     dataset = dataset_name  # "cifar100" #"imagenet" #"places365" #"cub" #cifar10
     train_ds, test_ds = util.get_data(preprocess, dataset)
+    module_dir = Path(__file__).parent
 
-    concepts = util.get_concepts(Path(__file__).parent / ("concept_sets/" + dataset + ".txt"))
+    concepts = util.get_concepts(module_dir / ("concept_sets/" + dataset + ".txt"))
     text = clip.tokenize(concepts).to(device)
 
     with torch.no_grad():
@@ -88,13 +89,13 @@ def main(dataset_name, sparsity_level, bs):
 
         datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=10, bs=bs)
 
-        np.save(f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy", datax)
-        np.save(f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy", datay)
+        np.save(module_dir / f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy", datax)
+        np.save(module_dir / f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy", datay)
 
         datax_test, datay_test = get_sparse_code(test_ds, dataset, dictionary, num_iterations=10, bs=bs)
 
-        np.save(f"saved_files/{dataset}_test_coeff_{str(sparsity_level)}.npy", datax_test)
-        np.save(f"saved_files/{dataset}_test_labels_{str(sparsity_level)}.npy", datay_test)
+        np.save(module_dir / f"saved_files/{dataset}_test_coeff_{str(sparsity_level)}.npy", datax_test)
+        np.save(module_dir / f"saved_files/{dataset}_test_labels_{str(sparsity_level)}.npy", datay_test)
 
 
 if __name__ == "__main__":
