@@ -7,9 +7,10 @@ import pickle
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from cub_config import BASE_DIR, N_ATTRIBUTES
 from PIL import Image
 from torch.utils.data import BatchSampler, DataLoader, Dataset
+
+from .cub_config import BASE_DIR, N_ATTRIBUTES
 
 
 class CUBDataset(Dataset):
