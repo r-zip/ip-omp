@@ -1,23 +1,28 @@
 import argparse
 import os
+from pathlib import Path
 
 import clip
-import CUB_dataset
 import numpy as np
 import torch
 import torchvision
 import tqdm
+
+from . import CUB_dataset
 
 torch.set_num_threads(1)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/16", device=device)
 
+MODULE_DIR = Path(__file__).parent
+
 
 def get_data(transform, dataset):
     if dataset == "places365":
+        data_dir = str(MODULE_DIR / "data/Places365")
         train_ds = torchvision.datasets.Places365(
-            root="./data/Places365",
+            root=data_dir,
             split="train-standard",
             small=True,
             download=True,
@@ -25,7 +30,7 @@ def get_data(transform, dataset):
         )
 
         test_ds = torchvision.datasets.Places365(
-            root="./data/Places365",
+            root=data_dir,
             split="val",
             small=True,
             download=True,
@@ -33,24 +38,26 @@ def get_data(transform, dataset):
         )
 
     if dataset == "imagenet":
-        data_dir = "./data/ImageNet"
+        data_dir = str(MODULE_DIR / "data/ImageNet")
         train_ds = torchvision.datasets.ImageFolder(f"{data_dir}/train/", transform=preprocess)
         test_ds = torchvision.datasets.ImageFolder(f"{data_dir}/val/", transform=preprocess)
 
     if dataset == "cifar10":
-        train_ds = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
-        test_ds = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
+        data_dir = str(MODULE_DIR / "data")
+        train_ds = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform)
+        test_ds = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
 
     if dataset == "cifar100":
-        train_ds = torchvision.datasets.CIFAR100(root="./data", train=True, download=False, transform=transform)
-        test_ds = torchvision.datasets.CIFAR100(root="./data", train=False, download=False, transform=transform)
+        data_dir = str(MODULE_DIR / "data")
+        train_ds = torchvision.datasets.CIFAR100(root=data_dir, train=True, download=False, transform=transform)
+        test_ds = torchvision.datasets.CIFAR100(root=data_dir, train=False, download=False, transform=transform)
 
     elif dataset == "cub":
         use_attr = True
         no_img = False
         uncertain_label = False
         n_class_atr = 1
-        data_dir = "data"
+        data_dir = str(MODULE_DIR / "data")
         image_dir = f"{data_dir}/CUB/CUB_200_2011"
         no_label = False
         prune = False
@@ -128,10 +135,10 @@ def clip_embedding(dataset, split="train", dataset_name=None):
                     if split == "train":
                         alphabet, class_name, img_name = img_path.split("/")[-3:]
                         filename = img_name[:-4]
-                        save_dir = f"./data/Places365_clip/train-standard/{alphabet}/{class_name}"
+                        save_dir = str(MODULE_DIR / f"data/Places365_clip/train-standard/{alphabet}/{class_name}")
                     elif split == "val":
                         filename = img_path.split("/")[-1][:-4]
-                        save_dir = "./data/Places365_clip/val_256/"
+                        save_dir = str(MODULE_DIR / "data/Places365_clip/val_256/")
                     else:
                         raise NameError(f"split not found: {split}")
                     os.makedirs(save_dir, exist_ok=True)
@@ -143,7 +150,7 @@ def clip_embedding(dataset, split="train", dataset_name=None):
                     img_path = tup[0]
                     img_dir = img_path.split("/")[-2]
                     filename = img_path.split("/")[-1][:-5]
-                    save_dir = f"./data/ImageNet_clip/{split}/{img_dir}/"
+                    save_dir = str(MODULE_DIR / f"data/ImageNet_clip/{split}/{img_dir}/")
                     os.makedirs(save_dir, exist_ok=True)
                     save_path = os.path.join(save_dir, f"{filename}.npy")
                     np.save(save_path, image_features[i])
