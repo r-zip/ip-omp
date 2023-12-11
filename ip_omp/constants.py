@@ -1,9 +1,11 @@
 from enum import Enum
+from pathlib import Path
 
 import torch
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 TRIALS = 1_000
+MODULE_DIR = Path(__file__).parent
 
 
 class BaseEnum(str, Enum):

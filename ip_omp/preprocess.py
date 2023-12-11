@@ -1,6 +1,5 @@
 import argparse
 import os
-from pathlib import Path
 
 import clip
 import numpy as np
@@ -9,13 +8,12 @@ import torchvision
 import tqdm
 
 from . import CUB_dataset
+from .constants import MODULE_DIR
 
 torch.set_num_threads(1)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/16", device=device)
-
-MODULE_DIR = Path(__file__).parent
 
 
 def get_data(transform, dataset):

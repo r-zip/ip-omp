@@ -1,9 +1,10 @@
 import argparse
-from pathlib import Path
 
 import numpy as np
 import torch
 import tqdm
+
+from .constants import MODULE_DIR
 
 torch.set_num_threads(1)
 
@@ -111,16 +112,15 @@ sparsity_level = None
 
 
 def main(dataset, sparsity_level, bs):
-    module_dir = Path(__file__).parent
     datax = torch.tensor(
         np.load(
-            module_dir / f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy",
+            MODULE_DIR / f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy",
             mmap_mode="r",
         )
     )
     datay = torch.tensor(
         np.load(
-            module_dir / f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy",
+            MODULE_DIR / f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy",
             mmap_mode="r",
         )
     )
@@ -128,10 +128,10 @@ def main(dataset, sparsity_level, bs):
     train_ds = torch.utils.data.TensorDataset(datax, datay)
 
     datax_test = torch.tensor(
-        np.load(module_dir / f"saved_files/{dataset}_test_coeff_{sparsity_level}.npy", mmap_mode="r")
+        np.load(MODULE_DIR / f"saved_files/{dataset}_test_coeff_{sparsity_level}.npy", mmap_mode="r")
     )
     datay_test = torch.tensor(
-        np.load(module_dir / f"saved_files/{dataset}_test_labels_{sparsity_level}.npy", mmap_mode="r")
+        np.load(MODULE_DIR / f"saved_files/{dataset}_test_labels_{sparsity_level}.npy", mmap_mode="r")
     )
 
     test_ds = torch.utils.data.TensorDataset(datax_test, datay_test)
@@ -147,8 +147,8 @@ def main(dataset, sparsity_level, bs):
 
         if iter >= 1000:
             break
-    torch.save(model, module_dir / f"saved_files/{dataset}_model_{str(sparsity_level)}.pt")
-    torch.save(optimizer, module_dir / f"saved_files/{dataset}_optim_{str(sparsity_level)}.pt")
+    torch.save(model, MODULE_DIR / f"saved_files/{dataset}_model_{str(sparsity_level)}.pt")
+    torch.save(optimizer, MODULE_DIR / f"saved_files/{dataset}_optim_{str(sparsity_level)}.pt")
 
 
 if __name__ == "__main__":
