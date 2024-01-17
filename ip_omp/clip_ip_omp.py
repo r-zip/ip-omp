@@ -87,12 +87,12 @@ def main(dataset_name, sparsity_level, bs):
 
         dictionary = dictionary / torch.linalg.norm(dictionary, axis=0)
 
-        datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=10, bs=bs)
+        datax, datay = get_sparse_code(train_ds, dataset, dictionary, num_iterations=sparsity_level, bs=bs)
 
         np.save(module_dir / f"saved_files/{dataset}_train_coeff_{str(sparsity_level)}.npy", datax)
         np.save(module_dir / f"saved_files/{dataset}_train_labels_{str(sparsity_level)}.npy", datay)
 
-        datax_test, datay_test = get_sparse_code(test_ds, dataset, dictionary, num_iterations=10, bs=bs)
+        datax_test, datay_test = get_sparse_code(test_ds, dataset, dictionary, num_iterations=sparsity_level, bs=bs)
 
         np.save(module_dir / f"saved_files/{dataset}_test_coeff_{str(sparsity_level)}.npy", datax_test)
         np.save(module_dir / f"saved_files/{dataset}_test_labels_{str(sparsity_level)}.npy", datay_test)
