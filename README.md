@@ -3,7 +3,7 @@
 
 **¹Johns Hopkins University, USA, `{achatto1,rpilgri1} <at> jhu.edu`**
 
-**²University of Pennsylvania, USA, `vidalr <at> upenn.edu`**
+**²University of Pennsylvania, USA, `vidalr <at> seas.upenn.edu`**
 
 This repository contains code to accompany [*Information Maximization Perspective of Orthogonal Matching Pursuit with Applications to Explainable AI (NeurIPS 2023)*](https://openreview.net/forum?id=CAF4CnUblx).
 
